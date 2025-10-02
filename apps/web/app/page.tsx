@@ -21,9 +21,18 @@ import { cn } from "@/lib/utils"
 import { DocumentsTab } from "@/components/documents-tab"
 import { ProjectsTab } from "@/components/projects-tab"
 import { MeetingsTab } from "@/components/meetings-tab"
-import { HomeDashboard } from "@/components/home-dashboard"
+import HomeDashboard from "@/components/home-dashboard"
+import ManagerInterface from "@/components/manager-interface"   // ✅ Import fixed to default import
 
-type TabType = "home" | "chat" | "meetings" | "projects" | "documents" | "directory" | "settings"
+type TabType =
+  | "home"
+  | "chat"
+  | "meetings"
+  | "projects"
+  | "documents"
+  | "directory"
+  | "settings"
+  | "manager"   // ✅ Added "manager"
 
 interface Message {
   id: number
@@ -62,6 +71,7 @@ export default function KnowledgeHub() {
     { id: "documents" as TabType, label: "Documents", icon: FileText },
     { id: "directory" as TabType, label: "Team Directory", icon: Users },
     { id: "settings" as TabType, label: "Settings", icon: Settings },
+    { id: "manager" as TabType, label: "Manager Interface", icon: Users }, // ✅ Added Manager tab
   ]
 
   const handleSendMessage = () => {
@@ -221,6 +231,8 @@ export default function KnowledgeHub() {
           <ProjectsTab />
         ) : activeTab === "meetings" ? (
           <MeetingsTab />
+        ) : activeTab === "manager" ? (   // ✅ Handle manager tab
+          <ManagerInterface />
         ) : (
           <div className="flex-1 flex items-center justify-center p-6">
             <div className="text-center max-w-md">

@@ -1,0 +1,2 @@
+This is an example document.
+It contains information about the project.
