@@ -1,3 +1,5 @@
+#LULUH
+
 """
 Documents API Route
 
@@ -7,9 +9,10 @@ Returns metadata for a specific document (with ACL check)
 
 from fastapi import APIRouter, Header, HTTPException, Path
 from typing import Optional
-# from app.models.schemas import DocMetadata
-# from app.services import auth
-
+ # from app.models.schemas import DocMetadata نشيل الهاش
+ # from app.services import auth نشيل الهاش
+ # from app.services.db import fetch_document اضفته
+ 
 router = APIRouter()
 
 
@@ -201,4 +204,39 @@ async def get_document(
         5. Check ACL: visibility='Public' OR project_id IN user_projects
         6. Return DocMetadata or raise HTTPException
     """
-    raise NotImplementedError("TODO: Implement get document metadata endpoint")
+
+
+
+
+ #raise NotImplementedError("TODO: Implement get document metadata endpoint") تمت المهمة
+
+
+# اضفته:
+
+    # تشييك Authentication
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    token = authorization.replace("Bearer ", "")
+
+    try:
+        user_id = await auth.verify_jwt(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    # هنا Load User Permissions
+    user_projects = await auth.get_user_projects(user_id)
+
+    # تشييك Query Document
+    document = await fetch_document(doc_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # تشييك Access Control
+    if document["visibility"] == "Public":
+        return DocMetadata(**document)
+    elif document["project_id"] in user_projects:
+        return DocMetadata(**document)
+    else:
+        raise HTTPException(status_code=403, detail="You do not have permission to access this document")
+    
