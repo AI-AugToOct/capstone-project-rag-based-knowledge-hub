@@ -1,0 +1,23 @@
+# Notion API client
+notion-client==2.2.1
+
+# AI Services
+cohere==4.37                    # Embeddings
+
+# Database
+psycopg2-binary==2.9.9         # PostgreSQL driver
+
+# Token counting for chunking
+tiktoken==0.5.2
+
+# HTTP requests
+requests==2.31.0
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Markdown processing (optional)
+markdown==3.5.1
+
+# Testing (optional)
+pytest==7.4.3

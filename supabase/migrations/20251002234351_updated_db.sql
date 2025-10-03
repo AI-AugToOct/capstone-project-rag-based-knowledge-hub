@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS chunks (
   order_in_doc INT NOT NULL,
   page INT,
   text TEXT NOT NULL,
-  embedding VECTOR(1536) NOT NULL,
+  embedding VECTOR(1024) NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
