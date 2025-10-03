@@ -4,12 +4,7 @@
 
 Our knowledge hub uses **5 tables** to manage permissions, documents, and search:
 
-```
-employees ──┐
-            ├──→ employee_projects ──→ projects
-            │                             ↓
-            └──→ audit_queries      documents ──→ chunks
-```
+![Database Schema](./schema.svg)
 
 **Core idea:** Users belong to projects → Documents belong to projects → We only retrieve chunks from documents the user can access.
 
