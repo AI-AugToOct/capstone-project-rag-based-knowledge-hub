@@ -1,3 +1,5 @@
+#LULUH
+
 """
 LLM Service
 
@@ -7,7 +9,10 @@ We use Groq because it's fast and cost-effective for open-source models.
 
 from typing import List
 import os
+# import groq  اضفته
 
+
+# raise NotImplementedError("TODO: Implement Groq LLM answer generation") تمت المهمة
 
 def call_llm(query: str, context_chunks: List[str]) -> str:
     """
@@ -161,4 +166,44 @@ def call_llm(query: str, context_chunks: List[str]) -> str:
         - Mixtral 8x7B: ~300-500ms
         - Groq is much faster than OpenAI for same models
     """
-    raise NotImplementedError("TODO: Implement Groq LLM answer generation")
+
+
+    # هنا Initialize Groq client
+    client = groq.Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+    # بخصوص Build system + user prompts
+    system_prompt = (
+        "You are a helpful assistant for our company's knowledge base.\n"
+        "Answer questions using ONLY the provided context.\n"
+        "If context is insufficient, say you don't know.\n"
+        "Always cite which documents you used.\n"
+        "Be concise but complete."
+    )
+
+    # Join context chunks into one string
+    context_text = "\n---\n".join(context_chunks)
+
+    user_prompt = f"""
+    Context:
+    ---
+    {context_text}
+    ---
+
+    Question: {query}
+
+    Answer:
+    """
+
+    #  Call Groq API
+    response = client.chat.completions.create(
+        model="llama-3.1-70b-versatile", 
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        temperature=0.1,
+        max_tokens=1024,
+    )
+
+    # اخر شي يرجع لنا الاجابة
+    return response.choices[0].message.content
