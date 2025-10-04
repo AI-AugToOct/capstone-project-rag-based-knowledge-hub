@@ -238,12 +238,10 @@ rag-knowledge-hub/
 ├── .gitignore                        # Git ignore rules
 ├── docker-compose.yml                # Local dev: backend + postgres (optional)
 ├── README.md                         # This file
-├── ARCHITECTURE.md                   # Lean architecture (essentials)
-├── ARCHITECTURE_FULL.md              # Full architecture (detailed design, NFRs, risks)
-│
+├── ARCHITECTURE.md                   # Lean architecture (essentials)│
 ├── supabase/                         # Database schema and migrations
 │   ├── migrations/
-│   │   └── 20250101000000_initial.sql # Creates 5 core tables + indexes
+│   │   └── 20251002234351_updated_db.sql # Creates 5 core tables + indexes
 │   └── README.md                     # Complete database documentation
 │
 ├── apps/                             # Frontend and backend applications
@@ -345,7 +343,7 @@ This section explains what each major folder does and why it exists. Read this t
 - Migrations ensure everyone's database has the same structure
 
 **Key files:**
-- `migrations/20250101000000_initial.sql` — Creates all tables and indexes (run this first!)
+- `migrations/20251002234351_updated_db.sql` — Creates all tables and indexes (run this first!)
 - `README.md` — Complete guide to the database with examples and troubleshooting
 
 **When you use it:**
