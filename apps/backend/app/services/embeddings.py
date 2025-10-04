@@ -1,3 +1,4 @@
+#DANIYAH
 """
 Embeddings Service
 
@@ -7,9 +8,64 @@ Embeddings are numerical representations of text that capture semantic meaning.
 
 from typing import List
 import os
+import cohere
+
+#from dotenv import load_dotenv  #for load env. variables
+#load_dotenv()
 
 
 def embed_query(text: str) -> List[float]:
+    
+     # 1. Validates the input text is not empty
+    if not text or not text.strip():
+        raise ValueError("Query text cannot be empty or None.")
+    
+    
+    # 2. Gets the Cohere API key from environment variables
+    api_key = os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("Cohere API key not found in environment variables.")
+ 
+ 
+    """ 3. Calls Cohere's embed API with:
+            - model: "embed-english-v3.0" (1024 dimensions)
+            - input_type: "search_query" (optimized for queries, not documents)
+            - texts: [text] (API accepts a list, we send one item)
+    """
+    # 3. Calls Cohere client
+    client = cohere.Client(api_key)
+    
+    try:
+        # 3.1. Call Cohere Embeddings API
+        response = client.embed(
+            texts=[text],
+            model="embed-english-v3.0",
+            input_type="search_query"
+        )
+        # 4. Extracts the embedding vector from the response
+        embedding = response.embeddings[0]
+
+        # 5. Ensure embedding has 1024 elements
+        if len(embedding) != 1024:
+            raise ValueError(f"Unexpected embedding size: {len(embedding)}")
+        
+        return embedding
+
+    except Exception as e:
+        raise Exception(f"Failed to get embedding from Cohere API: {e}")
+
+
+#just for check after 
+# if __name__ == "__main__":
+#     query = "How do I deploy the Atlas API?"
+#     vector = embed_query(query)
+#     print(f"Vector length: {len(vector)}")  # = 1024
+#     print(f"First 5 values: {vector[:5]}")
+
+
+
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
     """
     Converts a user's search query into a 1024-dimensional vector embedding.
 
@@ -110,4 +166,4 @@ def embed_query(text: str) -> List[float]:
         - Verify all elements are floats
         - Verify vector is not all zeros
     """
-    raise NotImplementedError("TODO: Implement Cohere query embedding")
+    #raise NotImplementedError("TODO: Implement Cohere query embedding")

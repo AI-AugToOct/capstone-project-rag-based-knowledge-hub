@@ -5,13 +5,45 @@ This module handles:
 - JWT token verification from Supabase
 - Loading user project memberships from database
 - Ensuring users can only access documents they have permission for
-"""
+""" 
+#Raghad
+
 
 from typing import List
 import os
+from jose import jwt
+from fastapi import HTTPException
+from app.db.client import fetch_all
+
+
+JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "change-me")
+JWT_ALG = "HS256"
 
 
 def verify_jwt(token: str) -> str:
+    
+    """
+    Verify a Supabase JWT and extract user_id (sub).
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+
+    try:
+        decoded = jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=[JWT_ALG],
+            options={"verify_signature": True, "verify_exp": True}
+        )
+        user_id = decoded.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token: no sub")
+        return user_id
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
     """
     Verifies a Supabase JWT token and extracts the user ID.
 
@@ -64,10 +96,22 @@ def verify_jwt(token: str) -> str:
         - Set options={"verify_signature": True, "verify_exp": True}
         - Extract user_id from decoded['sub']
     """
-    raise NotImplementedError("TODO: Implement JWT verification")
 
 
-def get_user_projects(user_id: str) -> List[str]:
+    
+    
+
+async def get_user_projects(user_id: str) -> List[str]:
+    """
+    Retrieves all project IDs for a user.
+    """
+    query = """
+        SELECT project_id
+        FROM employee_projects
+        WHERE employee_id = $1
+    """
+    rows = await fetch_all(query, user_id)
+    return [row["project_id"] for row in rows]
     """
     Retrieves all project IDs that a user has access to.
 
@@ -136,3 +180,4 @@ def get_user_projects(user_id: str) -> List[str]:
         - Consider caching results for performance (optional)
     """
     raise NotImplementedError("TODO: Implement get_user_projects query")
+

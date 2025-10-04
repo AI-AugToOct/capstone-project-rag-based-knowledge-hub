@@ -1,3 +1,5 @@
+#Daniyah
+
 """
 Embeddings Service for Workers
 
@@ -7,9 +9,32 @@ Same as backend embeddings, but with input_type="search_document" instead of "se
 
 from typing import List
 import os
-
+import cohere
 
 def embed_text(text: str) -> List[float]:
+    
+    if not text or text.strip() == "":
+        raise ValueError("Input text cannot be empty or None")
+
+    api_key = os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("COHERE_API_KEY not set in environment variables")
+
+    try:
+        client = cohere.Client(api_key)
+        response = client.embed(
+            texts=[text],
+            model="embed-english-v3.0",
+            input_type="search_document"  
+        )
+        # نرجع المصفوفه الاولى علشان نبي نص واحد 
+        return response.embeddings[0]
+
+    except Exception as e:
+        raise Exception(f"Failed to get embedding from Cohere: {e}")
+    
+#ــــــــــــــــــــــــــــــــــ
+    
     """
     Converts a document chunk into a 1024-dimensional vector embedding.
 
@@ -117,4 +142,4 @@ def embed_text(text: str) -> List[float]:
         - Verify all elements are floats
         - Verify different texts → different embeddings
     """
-    raise NotImplementedError("TODO: Implement Cohere document embedding")
+    #raise NotImplementedError("TODO: Implement Cohere document embedding")

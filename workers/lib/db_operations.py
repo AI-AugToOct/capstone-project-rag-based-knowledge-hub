@@ -1,3 +1,4 @@
+#Daniyah
 """
 Database Operations for Workers
 
@@ -9,6 +10,13 @@ import psycopg2
 import os
 
 
+def get_connection():
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable is not set")
+    return psycopg2.connect(db_url)
+
+
 def upsert_document(
     source_external_id: str,
     title: str,
@@ -18,6 +26,51 @@ def upsert_document(
     content_hash: str,
     language: Optional[str] = "en"
 ) -> int:
+    """Insert or update document and return doc_id"""
+    query = """
+        INSERT INTO documents (
+            source_external_id,
+            title,
+            project_id,
+            visibility,
+            uri,
+            content_hash,
+            language,
+            updated_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        ON CONFLICT (source_external_id)
+        DO UPDATE SET
+            title = EXCLUDED.title,
+            project_id = EXCLUDED.project_id,
+            visibility = EXCLUDED.visibility,
+            uri = EXCLUDED.uri,
+            content_hash = EXCLUDED.content_hash,
+            language = EXCLUDED.language,
+            updated_at = NOW()
+        RETURNING doc_id;
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (
+                source_external_id,
+                title,
+                project_id,
+                visibility,
+                uri,
+                content_hash,
+                language
+            ))
+            doc_id = cur.fetchone()[0]
+            conn.commit()
+            return doc_id
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
     """
     Inserts or updates a document in the documents table.
 
@@ -150,7 +203,7 @@ def upsert_document(
         - Upsert same document → verify returns same doc_id
         - Verify updated_at is updated on upsert
     """
-    raise NotImplementedError("TODO: Implement document upsert with conflict handling")
+   # raise NotImplementedError("TODO: Implement document upsert with conflict handling")
 
 
 def insert_chunk(
@@ -161,6 +214,41 @@ def insert_chunk(
     order_in_doc: int,
     page: Optional[int] = None
 ) -> None:
+    
+    """Insert a document chunk"""
+    if len(embedding) != 1024:
+        raise ValueError("Embedding must be 1024-dimensional")
+
+    query = """
+        INSERT INTO chunks (
+            doc_id,
+            text,
+            embedding,
+            heading_path,
+            order_in_doc,
+            page,
+            updated_at
+        ) VALUES (%s, %s, %s, %s, %s, %s, NOW());
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (
+                doc_id,
+                text,
+                embedding,  # pgvector supports list directly if column type is vector
+                heading_path,
+                order_in_doc,
+                page
+            ))
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
     """
     Inserts a chunk into the chunks table.
 
@@ -266,10 +354,26 @@ def insert_chunk(
         - Verify heading_path is stored correctly
         - Test with different order_in_doc values
     """
-    raise NotImplementedError("TODO: Implement chunk insertion with vector storage")
+    #raise NotImplementedError("TODO: Implement chunk insertion with vector storage")
 
 
 def check_content_changed(source_external_id: str, new_content_hash: str) -> bool:
+    """Return True if content has changed (or doc not exists)"""
+    query = "SELECT content_hash FROM documents WHERE source_external_id = %s;"
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (source_external_id,))
+            result = cur.fetchone()
+            if result is None:
+                # Document does not exist → consider content changed
+                return True
+            old_hash = result[0]
+            return old_hash != new_content_hash
+    finally:
+        conn.close()
+        
+        
     """
     Checks if document content has changed since last ingestion.
 
@@ -315,4 +419,4 @@ def check_content_changed(source_external_id: str, new_content_hash: str) -> boo
         - Re-ingestion (page edited): content_hash = "def456"
           → Re-embed chunks (hash changed)
     """
-    raise NotImplementedError("TODO: Implement content change detection")
+   # raise NotImplementedError("TODO: Implement content change detection")

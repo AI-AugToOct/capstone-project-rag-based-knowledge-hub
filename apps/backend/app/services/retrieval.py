@@ -1,3 +1,5 @@
+#DANIYAH
+
 """
 Retrieval Service
 
@@ -9,6 +11,12 @@ This module handles:
 
 from typing import List, Dict, Any
 import os
+import cohere
+import psycopg2
+import random #for test(exam.)
+
+#from dotenv import load_dotenv #for load env. variables
+#load_dotenv()
 
 
 def run_vector_search(
@@ -16,6 +24,77 @@ def run_vector_search(
     user_projects: List[str],
     top_k: int = 200
 ) -> List[Dict[str, Any]]:
+    
+    """
+    Searches the database for similar chunks using vector similarity + ACL filtering.
+    """
+
+    # 1. مهم أن يكون الـ vector حجمه 1024
+    if len(query_vector) != 1024:
+        raise ValueError(f"Query vector must have 1024 dimensions, got {len(query_vector)}")
+
+    # 2. الاتصال بقاعدة البيانات (من environment variables)
+    # conn = psycopg2.connect(
+    #     dbname=os.getenv("DB_NAME"),
+    #     user=os.getenv("DB_USER"),
+    #     password=os.getenv("DB_PASSWORD"),
+    #     host=os.getenv("DB_HOST", "localhost"),
+    #     port=os.getenv("DB_PORT", "5432")
+    # ) اذا عندي هذي البيانات تما اذا ما اقدر اجيبهم الكود الللي بعده نستخدمه
+    
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
+
+    try:
+        # 3. Runs a pgvector similarity search with ACL filter
+        sql = """
+        SELECT
+            c.chunk_id,
+            c.doc_id,
+            d.title,
+            c.text,
+            d.uri,
+            c.heading_path,
+            1 - (c.embedding <=> %s::vector) AS score
+        FROM chunks c
+        JOIN documents d ON d.doc_id = c.doc_id
+        WHERE d.deleted_at IS NULL
+          AND (
+            d.visibility = 'Public'
+            OR d.project_id = ANY(%s)
+          )
+        ORDER BY c.embedding <=> %s::vector
+        LIMIT %s
+        """
+
+        cur.execute(sql, (query_vector, user_projects, query_vector, top_k))
+        rows = cur.fetchall()
+
+        # 4. نحط النتايج ب dict
+        results = []
+        for row in rows:
+            results.append({
+                "chunk_id": row[0],
+                "doc_id": row[1],
+                "title": row[2],
+                "text": row[3],
+                "uri": row[4],
+                "heading_path": row[5],
+                "score": float(row[6]),
+            })
+
+        return results
+
+    except Exception as e:
+        raise Exception(f"Database query failed: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
     """
     Searches the database for similar chunks using vector similarity + ACL filtering.
 
@@ -149,10 +228,54 @@ def run_vector_search(
         - No results found → return empty list
         - Query vector wrong size → database will error
     """
-    raise NotImplementedError("TODO: Implement pgvector search with ACL")
+    #raise NotImplementedError("TODO: Implement pgvector search with ACL")
 
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
 
 def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Dict[str, Any]]:
+    """
+    Reranks chunks using Cohere's reranker model for better relevance.
+    """
+    if not chunks:
+        return []
+
+    api_key = os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("Cohere API key not found in environment variables.")
+
+    client = cohere.Client(api_key)
+
+    try:
+        # 1. Takes the 200 candidates from vector search
+        documents = [c["text"] for c in chunks]
+
+        # 2. Calls Cohere's rerank
+        response = client.rerank(
+            query=query,
+            documents=documents,
+            model="rerank-english-v3.0",
+            top_n=top_k
+        )
+
+        # point 3 and 4 
+        reranked = []
+        for r in response.results:
+            idx = r.index
+            chunk = chunks[idx].copy()
+            chunk["rerank_score"] = r.relevance_score
+            reranked.append(chunk)
+
+        return reranked
+
+    except Exception as e:
+        raise Exception(f"Failed to rerank with Cohere API: {e}")
+    
+
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+
+
     """
     Reranks chunks using Cohere's reranker model for better relevance.
 
@@ -278,4 +401,4 @@ def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Di
         - Verify chunks are reordered (not same order as input)
         - Verify rerank_score is added
     """
-    raise NotImplementedError("TODO: Implement Cohere reranking")
+    #raise NotImplementedError("TODO: Implement Cohere reranking")
