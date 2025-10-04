@@ -4,11 +4,14 @@ Markdown Normalizer
 Converts Notion blocks to clean Markdown format.
 Preserves structure (headings, lists, code blocks) while cleaning up formatting.
 """
+#Raghad
 
 from typing import List, Dict, Any, Tuple
 
 
 def normalize_to_markdown(blocks: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
+    
+    
     """
     Converts Notion blocks to Markdown and extracts structured metadata.
 
@@ -142,4 +145,169 @@ def normalize_to_markdown(blocks: List[Dict[str, Any]]) -> Tuple[str, List[Dict[
         - Verify heading_path correctly reflects nesting
         - Test with nested headings (h1 → h2 → h3)
     """
-    raise NotImplementedError("TODO: Implement Notion → Markdown conversion with heading paths")
+
+
+
+    """
+    Converts Notion blocks to Markdown and extracts structured metadata.
+
+    Args:
+        blocks (List[Dict[str, Any]]): List of Notion block objects
+            Example: [
+                {"type": "heading_1", "heading_1": {"rich_text": [{"plain_text": "Deployment"}]}},
+                {"type": "paragraph", "paragraph": {"rich_text": [{"plain_text": "To deploy..."}]}}
+            ]
+
+    Returns:
+        Tuple[str, List[Dict[str, Any]]]: (markdown_text, sections)
+            markdown_text (str): Clean Markdown representation
+                Example: "# Deployment\n\nTo deploy Atlas API...\n\n## Steps\n\n1. Configure..."
+
+            sections (List[Dict]): Structured sections with heading paths
+                Example: [
+                    {
+                        "heading_path": ["Deployment"],
+                        "text": "To deploy Atlas API..."
+                    },
+                    {
+                        "heading_path": ["Deployment", "Steps"],
+                        "text": "1. Configure environment\n2. Run make deploy"
+                    }
+                ]
+    """
+    markdown_lines = []
+    sections = []
+    heading_stack = []
+    current_section_text = []
+    
+    def extract_text(rich_text_list):
+        """Extract plain text from Notion rich_text array"""
+        if not rich_text_list:
+            return ""
+        return "".join([item.get("plain_text", "") for item in rich_text_list])
+    
+    def save_section():
+        """Save current section if it has content"""
+        if current_section_text:
+            text = "\n".join(current_section_text).strip()
+            if text:
+                sections.append({
+                    "heading_path": heading_stack.copy(),
+                    "text": text
+                })
+            current_section_text.clear()
+    
+    for block in blocks:
+        block_type = block.get("type", "")
+        
+        # Skip empty blocks
+        if not block_type or block_type not in block:
+            continue
+        
+        block_content = block[block_type]
+        
+        # Handle heading_1
+        if block_type == "heading_1":
+            save_section()
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(f"# {text}")
+                markdown_lines.append("")
+                heading_stack = [text]
+        
+        # Handle heading_2
+        elif block_type == "heading_2":
+            save_section()
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(f"## {text}")
+                markdown_lines.append("")
+                if len(heading_stack) >= 1:
+                    heading_stack = [heading_stack[0], text]
+                else:
+                    heading_stack = [text]
+        
+        # Handle heading_3
+        elif block_type == "heading_3":
+            save_section()
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(f"### {text}")
+                markdown_lines.append("")
+                if len(heading_stack) >= 2:
+                    heading_stack = [heading_stack[0], heading_stack[1], text]
+                elif len(heading_stack) == 1:
+                    heading_stack = [heading_stack[0], text]
+                else:
+                    heading_stack = [text]
+        
+        # Handle paragraph
+        elif block_type == "paragraph":
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(text)
+                markdown_lines.append("")
+                current_section_text.append(text)
+        
+        # Handle bulleted_list_item
+        elif block_type == "bulleted_list_item":
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(f"- {text}")
+                current_section_text.append(f"- {text}")
+        
+        # Handle numbered_list_item
+        elif block_type == "numbered_list_item":
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(f"1. {text}")
+                current_section_text.append(f"1. {text}")
+        
+        # Handle code
+        elif block_type == "code":
+            text = extract_text(block_content.get("rich_text", []))
+            language = block_content.get("language", "")
+            if text:
+                markdown_lines.append(f"{language}")
+                markdown_lines.append(text)
+                markdown_lines.append("")
+                markdown_lines.append("")
+                current_section_text.append(f"{language}\n{text}\n")
+        
+        # Handle quote
+        elif block_type == "quote":
+            text = extract_text(block_content.get("rich_text", []))
+            if text:
+                markdown_lines.append(f"> {text}")
+                markdown_lines.append("")
+                current_section_text.append(f"> {text}")
+        
+        # Handle divider
+        elif block_type == "divider":
+            markdown_lines.append("---")
+            markdown_lines.append("")
+            current_section_text.append("---")
+        
+        # Handle table
+        elif block_type == "table":
+            # Note: Full table implementation would require processing table_row children
+            # This is a placeholder as tables need child blocks
+            pass
+    
+    # Save last section
+    save_section()
+    
+    # Join markdown lines
+    markdown_text = "\n".join(markdown_lines)
+    
+    # Clean up: Remove more than 2 consecutive newlines
+    while "\n\n\n" in markdown_text:
+        markdown_text = markdown_text.replace("\n\n\n", "\n\n")
+    
+    # Normalize line endings
+    markdown_text = markdown_text.replace("\r\n", "\n")
+    
+    # Strip leading/trailing whitespace
+    markdown_text = markdown_text.strip()
+    
+    return markdown_text, sections
