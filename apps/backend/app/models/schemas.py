@@ -1,3 +1,5 @@
+# LULUH
+
 """
 Pydantic Models for API Request/Response Validation
 
@@ -11,18 +13,16 @@ FastAPI uses these for:
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+from enum import Enum
 
+# For Enum for document visibility types in DocMetadata
+class Visibility(str, Enum):
+    PUBLIC = "Public"
+    PRIVATE = "Private"
 
+# Class for search request and response models
 class SearchRequest(BaseModel):
-    """
-    Request body for POST /api/search
-
-    Example:
-        {
-            "query": "How do I deploy the Atlas API?",
-            "top_k": 12
-        }
-    """
+    """Request body for POST /api/search"""
     query: str = Field(
         ...,
         description="User's search question",
@@ -37,7 +37,7 @@ class SearchRequest(BaseModel):
         ge=1,
         le=50,
         example=12
-    )
+    ) # Limit to max 50 to avoid excessive load
 
     class Config:
         json_schema_extra = {
@@ -47,51 +47,14 @@ class SearchRequest(BaseModel):
             }
         }
 
-
+# Chunk will take BaseModel for search response
 class Chunk(BaseModel):
-    """
-    A single chunk in the search response (citation/source)
-
-    Example:
-        {
-            "doc_id": 123,
-            "title": "Atlas Deploy Guide",
-            "snippet": "To deploy Atlas API, first ensure...",
-            "uri": "https://notion.so/abc123",
-            "score": 0.87
-        }
-    """
-    doc_id: int = Field(
-        ...,
-        description="Document ID this chunk belongs to",
-        example=123
-    )
-
-    title: str = Field(
-        ...,
-        description="Document title",
-        example="Atlas Deploy Guide"
-    )
-
-    snippet: str = Field(
-        ...,
-        description="Relevant text excerpt from the document",
-        example="To deploy Atlas API, first ensure all environment variables..."
-    )
-
-    uri: str = Field(
-        ...,
-        description="Deep link to the source document (Notion page)",
-        example="https://notion.so/abc123"
-    )
-
-    score: float = Field(
-        ...,
-        description="Relevance score (0-1, higher is better)",
-        ge=0.0,
-        le=1.0,
-        example=0.87
-    )
+    """A single chunk in the search response (citation/source)"""
+    doc_id: int = Field(..., description="Document ID this chunk belongs to", example=123)
+    title: str = Field(..., description="Document title", example="Atlas Deploy Guide")
+    snippet: str = Field(..., description="Relevant text excerpt from the document", example="To deploy Atlas API...")
+    uri: str = Field(..., description="Deep link to the source document (Notion page)", example="https://notion.so/abc123")
+    score: float = Field(..., description="Relevance score (0-1, higher is better)", ge=0.0, le=1.0, example=0.87)
 
     class Config:
         json_schema_extra = {
@@ -106,54 +69,15 @@ class Chunk(BaseModel):
 
 
 class SearchResponse(BaseModel):
-    """
-    Response body for POST /api/search
-
-    Example:
-        {
-            "answer": "To deploy the Atlas API, follow these steps: 1. ...",
-            "chunks": [
-                {
-                    "doc_id": 123,
-                    "title": "Atlas Deploy Guide",
-                    "snippet": "To deploy Atlas API...",
-                    "uri": "https://notion.so/abc123",
-                    "score": 0.87
-                }
-            ],
-            "used_doc_ids": [123, 456]
-        }
-    """
-    answer: str = Field(
-        ...,
-        description="LLM-generated answer to the user's query",
-        example="To deploy the Atlas API, follow these steps: 1. Run `make deploy`..."
-    )
-
-    chunks: List[Chunk] = Field(
-        ...,
-        description="List of source chunks (citations) used to generate the answer",
-        example=[
-            {
-                "doc_id": 123,
-                "title": "Atlas Deploy Guide",
-                "snippet": "To deploy Atlas API...",
-                "uri": "https://notion.so/abc123",
-                "score": 0.87
-            }
-        ]
-    )
-
-    used_doc_ids: List[int] = Field(
-        ...,
-        description="List of document IDs that contributed to the answer (for audit logging)",
-        example=[123, 456, 789]
-    )
+    """Response body for POST /api/search"""
+    answer: str = Field(..., description="LLM-generated answer to the user's query")
+    chunks: List[Chunk] = Field(..., description="List of source chunks (citations) used to generate the answer")
+    used_doc_ids: List[int] = Field(..., description="List of document IDs that contributed to the answer (for audit logging)")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "answer": "To deploy the Atlas API, follow these steps: 1. Ensure environment variables are configured. 2. Run `make deploy` from the atlas/ directory...",
+                "answer": "To deploy the Atlas API, follow these steps: 1. Ensure environment variables are configured. 2. Run `make deploy`...",
                 "chunks": [
                     {
                         "doc_id": 123,
@@ -169,63 +93,19 @@ class SearchResponse(BaseModel):
 
 
 class DocMetadata(BaseModel):
-    """
-    Document metadata response for GET /api/docs/:doc_id
-
-    Example:
-        {
-            "doc_id": 123,
-            "title": "Atlas Deploy Guide",
-            "project_id": "Atlas",
-            "visibility": "Private",
-            "uri": "https://notion.so/abc123",
-            "updated_at": "2025-01-15T10:30:00Z",
-            "language": "en"
-        }
-    """
-    doc_id: int = Field(
-        ...,
-        description="Unique document ID",
-        example=123
-    )
-
-    title: str = Field(
-        ...,
-        description="Document title",
-        example="Atlas Deploy Guide"
-    )
-
-    project_id: Optional[str] = Field(
-        None,
-        description="Project this document belongs to (null for public docs)",
-        example="Atlas"
-    )
-
-    visibility: str = Field(
-        ...,
-        description="Document visibility (Public or Private)",
-        example="Private"
-    )
-
-    uri: str = Field(
-        ...,
-        description="Deep link to source document",
-        example="https://notion.so/abc123"
-    )
-
-    updated_at: datetime = Field(
-        ...,
-        description="Last update timestamp",
-        example="2025-01-15T10:30:00Z"
-    )
-
-    language: Optional[str] = Field(
-        None,
-        description="Document language code",
-        example="en"
-    )
+    """Document metadata response for GET /api/docs/:doc_id"""
+    doc_id: int = Field(..., description="Unique document ID", example=123)
+    title: str = Field(..., description="Document title", example="Atlas Deploy Guide")
+    project_id: Optional[str] = Field(None, description="Project this document belongs to (null for public docs)", example="Atlas")
+    visibility: Visibility = Field(..., description="Document visibility (Public or Private)", example="Private")
+    uri: str = Field(..., description="Deep link to source document", example="https://notion.so/abc123")
+    updated_at: datetime = Field(..., description="Last update timestamp", example="2025-01-15T10:30:00Z")
+    language: Optional[str] = Field(None, description="Document language code", example="en")
 
     class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
         json_schema_extra = {
             "example": {
                 "doc_id": 123,
@@ -237,47 +117,3 @@ class DocMetadata(BaseModel):
                 "language": "en"
             }
         }
-
-
-# Why We Use Pydantic Models:
-#
-# 1. Automatic Validation:
-#    - FastAPI validates incoming requests automatically
-#    - If query is too long → returns 422 Unprocessable Entity
-#    - If top_k is negative → returns 422
-#
-# 2. Type Safety:
-#    - Python type hints improve code quality
-#    - IDEs provide autocomplete
-#    - Catch bugs before runtime
-#
-# 3. Auto-Generated API Docs:
-#    - FastAPI generates OpenAPI/Swagger docs automatically
-#    - Examples and descriptions appear in docs
-#    - Try it: http://localhost:8000/docs
-#
-# 4. Serialization:
-#    - Pydantic handles JSON → Python object conversion
-#    - And Python object → JSON conversion
-#    - Automatic datetime formatting
-#
-# 5. Documentation:
-#    - Field descriptions serve as inline documentation
-#    - Examples show developers how to use the API
-#
-# Example Validation:
-#
-#   Bad Request:
-#     {"query": ""}  ← Empty string
-#
-#   FastAPI Response:
-#     422 Unprocessable Entity
-#     {
-#       "detail": [
-#         {
-#           "loc": ["body", "query"],
-#           "msg": "ensure this value has at least 1 characters",
-#           "type": "value_error.any_str.min_length"
-#         }
-#       ]
-#     }
