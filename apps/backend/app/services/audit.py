@@ -1,3 +1,5 @@
+#LULUH
+
 """
 Audit Service
 
@@ -8,10 +10,14 @@ This module handles logging all search queries for:
 """
 
 from typing import List
-import os
+import os # ماله داعي غالبا
+from app.db.client import execute #اضفته
+import logging #اضفته
 
 
-def audit_log(user_id: str, query: str, used_doc_ids: List[int]) -> None:
+# raise NotImplementedError("TODO: Implement audit logging to database") تمت المهمة
+
+async def audit_log(user_id: str, query: str, used_doc_ids: List[int]) -> None:
     """
     Logs a search query to the audit_queries table.
 
@@ -148,4 +154,11 @@ def audit_log(user_id: str, query: str, used_doc_ids: List[int]) -> None:
         - Verify array format is correct
         - Test with empty used_doc_ids
     """
-    raise NotImplementedError("TODO: Implement audit logging to database")
+    sql = """
+        INSERT INTO audit_queries (user_id, query, used_doc_ids, created_at)
+        VALUES ($1, $2, $3, NOW())
+    """
+    try:
+        await execute(sql, user_id, query, used_doc_ids)
+    except Exception as e:
+        logging.error(f"Failed to insert audit log: {e}")

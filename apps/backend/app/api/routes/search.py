@@ -1,3 +1,4 @@
+#Daniyah
 """
 Search API Route
 
@@ -7,20 +8,93 @@ Handles: POST /api/search
 
 from fastapi import APIRouter, Header, HTTPException
 from typing import Optional
-# from app.models.schemas import SearchRequest, SearchResponse
-# from app.services import auth, embeddings, retrieval, llm, audit
+from app.models.schemas import SearchRequest, SearchResponse
+import asyncio
+from app.services import auth, embeddings, retrieval, llm, audit
 
 router = APIRouter()
 
 
 @router.post("/search")
 async def search(
-    # request: SearchRequest,  # Uncomment when schemas.py is implemented
+    request: SearchRequest,  # Uncomment when schemas.py is implemented
     authorization: Optional[str] = Header(None)
 ):
     """
     Main RAG search endpoint - the heart of the system.
+    """
+    
+    # --------- Step 1: Authentication ---------
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid or missing Authorization header")
+    token = authorization.replace("Bearer ", "")
+    user_id = auth.verify_jwt(token)
 
+    # --------- Step 2: Load User Permissions ---------
+    user_projects = await auth.get_user_projects(user_id)
+
+    # --------- Step 3: Validate Query ---------
+    if not request.query or not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    # --------- Step 4: Embed Query ---------
+    try:
+        query_vector = embeddings.embed_query(request.query)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to embed query: {e}")
+
+    # --------- Step 5: Vector Search with ACL ---------
+    try:
+        candidate_chunks = retrieval.run_vector_search(
+            query_vector=query_vector,
+            user_projects=user_projects,
+            top_k=200
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Vector search failed: {e}")
+
+    # --------- Step 6: Rerank ---------
+    try:
+        top_k = request.top_k or 12
+        chunks = retrieval.rerank(candidate_chunks, request.query, top_k=top_k)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rerank failed: {e}")
+
+    # --------- Step 7: Generate Answer ---------
+    try:
+        context_texts = [c["text"] for c in chunks]
+        answer = llm.call_llm(request.query, context_texts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM generation failed: {e}")
+
+    # --------- Step 8: Audit Log (async, non-blocking) ---------
+    used_doc_ids = [c["doc_id"] for c in chunks]
+    asyncio.create_task(audit.audit_log(user_id, request.query, used_doc_ids))
+
+    # --------- Step 9: Format Chunks for Response ---------
+    response_chunks = [
+        {
+            "doc_id": c["doc_id"],
+            "title": c["title"],
+            "snippet": c["text"][:200] + ("..." if len(c["text"]) > 200 else ""),
+            "uri": c["uri"],
+            "score": c.get("rerank_score", c.get("score", 0.0))
+        }
+        for c in chunks
+    ]
+
+    # --------- Step 10: Return Response ---------
+    return SearchResponse(
+        answer=answer,
+        chunks=response_chunks,
+        used_doc_ids=used_doc_ids
+    )
+    
+
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+#ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
+
+    """
     Request Body (SearchRequest):
         {
             "query": "How do I deploy the Atlas API?",
@@ -205,4 +279,4 @@ async def search(
 
         4. Return SearchResponse object (FastAPI auto-converts to JSON)
     """
-    raise NotImplementedError("TODO: Implement search endpoint")
+   # raise NotImplementedError("TODO: Implement search endpoint")
