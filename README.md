@@ -640,34 +640,34 @@ Users can search via frontend → backend
 ┌─────────────────────────────────────────────────────────────────┐
 │                         USER'S BROWSER                          │
 │                                                                 │
-│  apps/web/ (Frontend)                                          │
-│  - User types question in ChatInput.tsx                        │
-│  - lib/api.ts sends POST to backend                            │
-│  - MessageList.tsx displays answer                             │
-│  - SourcesList.tsx shows citations                             │
+│  apps/web/ (Frontend)                                           │
+│  - User types question in ChatInput.tsx                         │
+│  - lib/api.ts sends POST to backend                             │
+│  - MessageList.tsx displays answer                              │
+│  - SourcesList.tsx shows citations                              │
 └────────────────────┬────────────────────────────────────────────┘
                      │ HTTP Request (with JWT token)
                      ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                      apps/backend/ (API Server)                 │
 │                                                                 │
-│  1. main.py receives request                                   │
-│  2. api/routes/search.py handles /api/search                   │
-│  3. services/auth.py verifies JWT                              │
-│  4. services/embeddings.py converts query → vector             │
-│  5. services/retrieval.py searches database (with ACL)         │
-│  6. services/llm.py generates answer                           │
-│  7. services/audit.py logs query                               │
-│  8. Returns JSON response                                      │
+│  1. main.py receives request                                    │
+│  2. api/routes/search.py handles /api/search                    │
+│  3. services/auth.py verifies JWT                               │
+│  4. services/embeddings.py converts query → vector              │
+│  5. services/retrieval.py searches database (with ACL)          │
+│  6. services/llm.py generates answer                            │
+│  7. services/audit.py logs query                                │
+│  8. Returns JSON response                                       │
 └────────────────────┬────────────────────────────────────────────┘
                      │ SQL Queries
                      ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                   supabase/ (Database)                          │
 │                                                                 │
-│  - employees, projects, employee_projects (ACL)                │
+│  - employees, projects, employee_projects (ACL)                 │
 │  - documents (metadata)                                         │
-│  - chunks (searchable text + embeddings)                       │
+│  - chunks (searchable text + embeddings)                        │
 │  - audit_queries (logs)                                         │
 └─────────────────────────────────────────────────────────────────┘
                      ↑
@@ -676,12 +676,12 @@ Users can search via frontend → backend
 ┌─────────────────────────────────────────────────────────────────┐
 │                  workers/ (Ingestion Pipeline)                  │
 │                                                                 │
-│  1. ingest_notion.py runs (scheduled via cron)                 │
-│  2. lib/notion_client.py fetches pages                         │
-│  3. lib/normalizer.py converts to Markdown                     │
-│  4. lib/chunker.py splits into pieces                          │
-│  5. lib/embeddings.py generates vectors                        │
-│  6. lib/db_operations.py saves to database                     │
+│  1. ingest_notion.py runs (scheduled via cron)                  │
+│  2. lib/notion_client.py fetches pages                          │
+│  3. lib/normalizer.py converts to Markdown                      │
+│  4. lib/chunker.py splits into pieces                           │
+│  5. lib/embeddings.py generates vectors                         │
+│  6. lib/db_operations.py saves to database                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
