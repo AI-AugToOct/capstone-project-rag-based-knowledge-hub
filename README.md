@@ -32,7 +32,7 @@ RAG Knowledge Hub is an enterprise knowledge search platform that combines the p
 
 - 🔐 **Permission-Aware Search** — Users only see documents from their projects + public docs
 - 🎯 **Vector Search** — Uses pgvector with HNSW index for fast semantic search
-- 🤖 **LLM-Powered Answers** — Groq inference (Llama 3.1, Mixtral) with Cohere embeddings
+- 🤖 **LLM-Powered Answers** — Groq inference (Llama 3.3, Mixtral, ChatGPT-OSS ) with Cohere embeddings
 - 📚 **Source Citations** — Every answer includes links to source documents
 - 🔄 **Cohere Reranker** — Improves relevance by reranking vector search results
 - 📊 **Audit Logging** — Tracks every query for compliance and debugging
@@ -306,7 +306,7 @@ rag-knowledge-hub/
 │       │   │   ├── auth.py           # JWT verification, get user projects
 │       │   │   ├── embeddings.py     # Cohere embed-english-v3 (1024-dim)
 │       │   │   ├── retrieval.py      # pgvector search + ACL + Cohere reranking
-│       │   │   ├── llm.py            # Groq LLM inference (Llama 3.1, Mixtral)
+│       │   │   ├── llm.py            # Groq LLM inference (Llama 3.3, Mixtral, ChatGPT-OSS)
 │       │   │   └── audit.py          # Audit logging to database
 │       │   │
 │       │   ├── db/
@@ -516,7 +516,7 @@ This is where the **real work** happens. Each service has a specific job:
   - `rerank(chunks, query)` → Calls Cohere reranker, returns top 12 most relevant
 
 - **`llm.py`** — Generate Answers
-  - `call_llm(query, chunks)` → Calls Groq (Llama 3.1 or Mixtral), generates answer
+  - `call_llm(query, chunks)` → Calls Groq (Llama 3.3 or Mixtral, ChatGPT-OSS), generates answer
 
 - **`audit.py`** — Logging
   - `audit_log(user_id, query, used_doc_ids)` → Inserts row into `audit_queries` table
@@ -640,34 +640,34 @@ Users can search via frontend → backend
 ┌─────────────────────────────────────────────────────────────────┐
 │                         USER'S BROWSER                          │
 │                                                                 │
-│  apps/web/ (Frontend)                                          │
-│  - User types question in ChatInput.tsx                        │
-│  - lib/api.ts sends POST to backend                            │
-│  - MessageList.tsx displays answer                             │
-│  - SourcesList.tsx shows citations                             │
+│  apps/web/ (Frontend)                                           │
+│  - User types question in ChatInput.tsx                         │
+│  - lib/api.ts sends POST to backend                             │
+│  - MessageList.tsx displays answer                              │
+│  - SourcesList.tsx shows citations                              │
 └────────────────────┬────────────────────────────────────────────┘
                      │ HTTP Request (with JWT token)
                      ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                      apps/backend/ (API Server)                 │
 │                                                                 │
-│  1. main.py receives request                                   │
-│  2. api/routes/search.py handles /api/search                   │
-│  3. services/auth.py verifies JWT                              │
-│  4. services/embeddings.py converts query → vector             │
-│  5. services/retrieval.py searches database (with ACL)         │
-│  6. services/llm.py generates answer                           │
-│  7. services/audit.py logs query                               │
-│  8. Returns JSON response                                      │
+│  1. main.py receives request                                    │
+│  2. api/routes/search.py handles /api/search                    │
+│  3. services/auth.py verifies JWT                               │
+│  4. services/embeddings.py converts query → vector              │
+│  5. services/retrieval.py searches database (with ACL)          │
+│  6. services/llm.py generates answer                            │
+│  7. services/audit.py logs query                                │
+│  8. Returns JSON response                                       │
 └────────────────────┬────────────────────────────────────────────┘
                      │ SQL Queries
                      ↓
 ┌─────────────────────────────────────────────────────────────────┐
 │                   supabase/ (Database)                          │
 │                                                                 │
-│  - employees, projects, employee_projects (ACL)                │
+│  - employees, projects, employee_projects (ACL)                 │
 │  - documents (metadata)                                         │
-│  - chunks (searchable text + embeddings)                       │
+│  - chunks (searchable text + embeddings)                        │
 │  - audit_queries (logs)                                         │
 └─────────────────────────────────────────────────────────────────┘
                      ↑
@@ -676,12 +676,12 @@ Users can search via frontend → backend
 ┌─────────────────────────────────────────────────────────────────┐
 │                  workers/ (Ingestion Pipeline)                  │
 │                                                                 │
-│  1. ingest_notion.py runs (scheduled via cron)                 │
-│  2. lib/notion_client.py fetches pages                         │
-│  3. lib/normalizer.py converts to Markdown                     │
-│  4. lib/chunker.py splits into pieces                          │
-│  5. lib/embeddings.py generates vectors                        │
-│  6. lib/db_operations.py saves to database                     │
+│  1. ingest_notion.py runs (scheduled via cron)                  │
+│  2. lib/notion_client.py fetches pages                          │
+│  3. lib/normalizer.py converts to Markdown                      │
+│  4. lib/chunker.py splits into pieces                           │
+│  5. lib/embeddings.py generates vectors                         │
+│  6. lib/db_operations.py saves to database                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

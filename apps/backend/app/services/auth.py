@@ -11,7 +11,7 @@ This module handles:
 
 from typing import List
 import os
-from jose import jwt
+import jwt
 from fastapi import HTTPException
 from app.db.client import fetch_all
 
@@ -21,7 +21,7 @@ JWT_ALG = "HS256"
 
 
 def verify_jwt(token: str) -> str:
-    
+
     """
     Verify a Supabase JWT and extract user_id (sub).
     """
@@ -33,8 +33,10 @@ def verify_jwt(token: str) -> str:
             token,
             JWT_SECRET,
             algorithms=[JWT_ALG],
+            audience="authenticated",  # Supabase uses "authenticated" for logged-in users
             options={"verify_signature": True, "verify_exp": True}
         )
+
         user_id = decoded.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token: no sub")
@@ -42,6 +44,8 @@ def verify_jwt(token: str) -> str:
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
     """

@@ -55,7 +55,11 @@ async def run_vector_search(
         LIMIT $3
         """
 
-        rows = await fetch_all(sql, query_vector, user_projects, top_k)
+        # Convert Python list to PostgreSQL array format
+        # [0.1, 0.2, ...] → '[0.1,0.2,...]'
+        vector_str = '[' + ','.join(map(str, query_vector)) + ']'
+
+        rows = await fetch_all(sql, vector_str, user_projects, top_k)
 
         # 3. Format results
         results = []
