@@ -32,7 +32,7 @@ RAG Knowledge Hub is an enterprise knowledge search platform that combines the p
 
 - 🔐 **Permission-Aware Search** — Users only see documents from their projects + public docs
 - 🎯 **Vector Search** — Uses pgvector with HNSW index for fast semantic search
-- 🤖 **LLM-Powered Answers** — Groq inference (Llama 3.1, Mixtral) with Cohere embeddings
+- 🤖 **LLM-Powered Answers** — Groq inference (Llama 3.3, Mixtral, ChatGPT-OSS ) with Cohere embeddings
 - 📚 **Source Citations** — Every answer includes links to source documents
 - 🔄 **Cohere Reranker** — Improves relevance by reranking vector search results
 - 📊 **Audit Logging** — Tracks every query for compliance and debugging
@@ -306,7 +306,7 @@ rag-knowledge-hub/
 │       │   │   ├── auth.py           # JWT verification, get user projects
 │       │   │   ├── embeddings.py     # Cohere embed-english-v3 (1024-dim)
 │       │   │   ├── retrieval.py      # pgvector search + ACL + Cohere reranking
-│       │   │   ├── llm.py            # Groq LLM inference (Llama 3.1, Mixtral)
+│       │   │   ├── llm.py            # Groq LLM inference (Llama 3.3, Mixtral, ChatGPT-OSS)
 │       │   │   └── audit.py          # Audit logging to database
 │       │   │
 │       │   ├── db/
@@ -516,7 +516,7 @@ This is where the **real work** happens. Each service has a specific job:
   - `rerank(chunks, query)` → Calls Cohere reranker, returns top 12 most relevant
 
 - **`llm.py`** — Generate Answers
-  - `call_llm(query, chunks)` → Calls Groq (Llama 3.1 or Mixtral), generates answer
+  - `call_llm(query, chunks)` → Calls Groq (Llama 3.3 or Mixtral, ChatGPT-OSS), generates answer
 
 - **`audit.py`** — Logging
   - `audit_log(user_id, query, used_doc_ids)` → Inserts row into `audit_queries` table
