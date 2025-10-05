@@ -59,7 +59,20 @@ async def init_db_pool():
         - database_url = os.getenv("DATABASE_URL")
         - pool = await asyncpg.create_pool(database_url, min_size=10, max_size=20)
     """
-    raise NotImplementedError("TODO: Implement database pool initialization")
+    global pool
+
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise Exception("DATABASE_URL environment variable is not set")
+
+    pool = await asyncpg.create_pool(
+        database_url,
+        min_size=10,
+        max_size=20,
+        command_timeout=60
+    )
+
+    print(f"✅ Database connection pool initialized (min_size=10, max_size=20)")
 
 
 async def close_db_pool():
@@ -86,7 +99,11 @@ async def close_db_pool():
         - if pool:
         -     await pool.close()
     """
-    raise NotImplementedError("TODO: Implement pool cleanup")
+    global pool
+
+    if pool:
+        await pool.close()
+        print("✅ Database connection pool closed")
 
 
 async def fetch_one(query: str, *args) -> Optional[Dict[str, Any]]:
@@ -125,7 +142,12 @@ async def fetch_one(query: str, *args) -> Optional[Dict[str, Any]]:
         -     row = await connection.fetchrow(query, *args)
         -     return dict(row) if row else None
     """
-    raise NotImplementedError("TODO: Implement fetch_one helper")
+    if pool is None:
+        raise Exception("Database pool not initialized. Call init_db_pool() first.")
+
+    async with pool.acquire() as connection:
+        row = await connection.fetchrow(query, *args)
+        return dict(row) if row else None
 
 
 async def fetch_all(query: str, *args) -> List[Dict[str, Any]]:
@@ -170,7 +192,12 @@ async def fetch_all(query: str, *args) -> List[Dict[str, Any]]:
         -     rows = await connection.fetch(query, *args)
         -     return [dict(row) for row in rows]
     """
-    raise NotImplementedError("TODO: Implement fetch_all helper")
+    if pool is None:
+        raise Exception("Database pool not initialized. Call init_db_pool() first.")
+
+    async with pool.acquire() as connection:
+        rows = await connection.fetch(query, *args)
+        return [dict(row) for row in rows]
 
 
 async def execute(query: str, *args) -> str:
@@ -203,7 +230,12 @@ async def execute(query: str, *args) -> str:
         -     status = await connection.execute(query, *args)
         -     return status
     """
-    raise NotImplementedError("TODO: Implement execute helper")
+    if pool is None:
+        raise Exception("Database pool not initialized. Call init_db_pool() first.")
+
+    async with pool.acquire() as connection:
+        status = await connection.execute(query, *args)
+        return status
 
 
 # Example Usage in Services:

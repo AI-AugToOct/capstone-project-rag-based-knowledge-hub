@@ -10,7 +10,7 @@ import os
 
 # Uncomment when routes are implemented:
 # from app.api.routes import search, docs
-# from app.db.client import init_db_pool, close_db_pool
+from app.db.client import init_db_pool, close_db_pool
 
 
 # Create FastAPI app
@@ -56,12 +56,7 @@ async def startup():
         ✅ Database connection pool initialized
     """
     print("🚀 Starting RAG Knowledge Hub API...")
-
-    # Uncomment when db/client.py is implemented:
-    # await init_db_pool()
-    # print("✅ Database connection pool initialized")
-
-    raise NotImplementedError("TODO: Implement startup (initialize DB pool)")
+    await init_db_pool()
 
 
 # Shutdown event: Close database connection pool
@@ -84,12 +79,7 @@ async def shutdown():
         ✅ Database connection pool closed
     """
     print("🛑 Shutting down RAG Knowledge Hub API...")
-
-    # Uncomment when db/client.py is implemented:
-    # await close_db_pool()
-    # print("✅ Database connection pool closed")
-
-    raise NotImplementedError("TODO: Implement shutdown (close DB pool)")
+    await close_db_pool()
 
 
 # Include API routes

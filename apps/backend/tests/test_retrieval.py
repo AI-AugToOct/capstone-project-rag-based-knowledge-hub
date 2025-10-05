@@ -8,7 +8,8 @@ import pytest
 from app.services.retrieval import run_vector_search, rerank
 
 
-def test_run_vector_search():
+@pytest.mark.asyncio
+async def test_run_vector_search():
     """Test run_vector_search() with test DB or mock"""
 
     # Given: A test query vector (1024 dims)
@@ -16,7 +17,7 @@ def test_run_vector_search():
     user_projects = ["Atlas", "Phoenix"]
 
     # When
-    results = run_vector_search(test_vector, user_projects, top_k=10)
+    results = await run_vector_search(test_vector, user_projects, top_k=10)
 
     # Then - Verify requirements from table:
     # Returns list of dicts with correct keys
@@ -40,14 +41,15 @@ def test_run_vector_search():
         print("⚠️  run_vector_search() returned empty (no data in DB)")
 
 
-def test_run_vector_search_invalid_dimensions():
+@pytest.mark.asyncio
+async def test_run_vector_search_invalid_dimensions():
     """Test that wrong vector dimensions raises error"""
 
     bad_vector = [0.1] * 512  # Wrong size
     user_projects = ["Atlas"]
 
     with pytest.raises(ValueError) as exc_info:
-        run_vector_search(bad_vector, user_projects, top_k=10)
+        await run_vector_search(bad_vector, user_projects, top_k=10)
 
     assert "1024 dimensions" in str(exc_info.value)
 

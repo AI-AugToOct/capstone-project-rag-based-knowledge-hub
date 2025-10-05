@@ -12,7 +12,7 @@ cohere==4.37               # Embeddings and reranking
 groq==0.4.1                # LLM inference
 
 # Authentication
-python-jose[cryptography]==3.3.0   # JWT handling
+PyJWT>=2.8.0                       # JWT handling (actively maintained, no deprecation warnings)
 python-multipart==0.0.6            # Form data parsing
 
 # Environment variables
