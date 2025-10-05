@@ -12,42 +12,29 @@ This module handles:
 from typing import List, Dict, Any
 import os
 import cohere
-import psycopg2
-import random #for test(exam.)
+from app.db.client import fetch_all
 
 #from dotenv import load_dotenv #for load env. variables
 #load_dotenv()
 
 
-def run_vector_search(
+async def run_vector_search(
     query_vector: List[float],
     user_projects: List[str],
     top_k: int = 200
 ) -> List[Dict[str, Any]]:
-    
+
     """
     Searches the database for similar chunks using vector similarity + ACL filtering.
+    Uses the connection pool for efficient database access.
     """
 
-    # 1. مهم أن يكون الـ vector حجمه 1024
+    # 1. Validate vector dimensions
     if len(query_vector) != 1024:
         raise ValueError(f"Query vector must have 1024 dimensions, got {len(query_vector)}")
 
-    # 2. الاتصال بقاعدة البيانات (من environment variables)
-    # conn = psycopg2.connect(
-    #     dbname=os.getenv("DB_NAME"),
-    #     user=os.getenv("DB_USER"),
-    #     password=os.getenv("DB_PASSWORD"),
-    #     host=os.getenv("DB_HOST", "localhost"),
-    #     port=os.getenv("DB_PORT", "5432")
-    # ) اذا عندي هذي البيانات تما اذا ما اقدر اجيبهم الكود الللي بعده نستخدمه
-    
-    DATABASE_URL = os.getenv("DATABASE_URL")
-    conn = psycopg2.connect(DATABASE_URL)
-    cur = conn.cursor()
-
+    # 2. Run pgvector similarity search with ACL filter using connection pool
     try:
-        # 3. Runs a pgvector similarity search with ACL filter
         sql = """
         SELECT
             c.chunk_id,
@@ -56,41 +43,37 @@ def run_vector_search(
             c.text,
             d.uri,
             c.heading_path,
-            1 - (c.embedding <=> %s::vector) AS score
+            1 - (c.embedding <=> $1::vector) AS score
         FROM chunks c
         JOIN documents d ON d.doc_id = c.doc_id
         WHERE d.deleted_at IS NULL
           AND (
             d.visibility = 'Public'
-            OR d.project_id = ANY(%s)
+            OR d.project_id = ANY($2)
           )
-        ORDER BY c.embedding <=> %s::vector
-        LIMIT %s
+        ORDER BY c.embedding <=> $1::vector
+        LIMIT $3
         """
 
-        cur.execute(sql, (query_vector, user_projects, query_vector, top_k))
-        rows = cur.fetchall()
+        rows = await fetch_all(sql, query_vector, user_projects, top_k)
 
-        # 4. نحط النتايج ب dict
+        # 3. Format results
         results = []
         for row in rows:
             results.append({
-                "chunk_id": row[0],
-                "doc_id": row[1],
-                "title": row[2],
-                "text": row[3],
-                "uri": row[4],
-                "heading_path": row[5],
-                "score": float(row[6]),
+                "chunk_id": row["chunk_id"],
+                "doc_id": row["doc_id"],
+                "title": row["title"],
+                "text": row["text"],
+                "uri": row["uri"],
+                "heading_path": row["heading_path"],
+                "score": float(row["score"]),
             })
 
         return results
 
     except Exception as e:
         raise Exception(f"Database query failed: {e}")
-    finally:
-        cur.close()
-        conn.close()
 
 
 #ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
