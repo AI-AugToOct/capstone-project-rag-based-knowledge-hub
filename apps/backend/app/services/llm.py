@@ -43,7 +43,7 @@ def call_llm(query: str, context_chunks: List[str]) -> str:
 
     # Call Groq API to generate answer
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",  # or "mixtral-8x7b-32768"
+        model="llama-3.3-70b-versatile",  # Updated model (3.1 deprecated)
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

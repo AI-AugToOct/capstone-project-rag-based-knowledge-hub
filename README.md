@@ -238,7 +238,9 @@ rag-knowledge-hub/
 ├── .gitignore                        # Git ignore rules
 ├── docker-compose.yml                # Local dev: backend + postgres (optional)
 ├── README.md                         # This file
-├── ARCHITECTURE.md                   # Lean architecture (essentials)│
+├── ARCHITECTURE.md                   # Lean architecture (essentials)
+├── TESTING_GUIDE.md                  # How to test individual functions
+│
 ├── supabase/                         # Database schema and migrations
 │   ├── migrations/
 │   │   └── 20251002234351_updated_db.sql # Creates 5 core tables + indexes
@@ -275,11 +277,18 @@ rag-knowledge-hub/
 │   │   ├── types/
 │   │   │   └── index.ts              # TypeScript types (SearchResponse, Chunk, etc.)
 │   │   │
+│   │   ├── __tests__/                # Frontend unit tests (see README in this folder)
+│   │   │   ├── components/           # Component tests (Jest + React Testing Library)
+│   │   │   ├── lib/                  # API/utility tests
+│   │   │   └── README.md             # How to run frontend tests
+│   │   │
 │   │   ├── public/                   # Static assets (logos, placeholders)
 │   │   │
 │   │   ├── package.json              # Dependencies and scripts
 │   │   ├── tsconfig.json             # TypeScript config
 │   │   ├── next.config.mjs           # Next.js config
+│   │   ├── jest.config.js            # Jest configuration for tests
+│   │   ├── jest.setup.js             # Test setup file
 │   │   ├── .env.local                # Local environment variables (gitignored)
 │   │   ├── postcss.config.mjs        # PostCSS config
 │   │   └── components.json           # shadcn/ui config
@@ -306,6 +315,8 @@ rag-knowledge-hub/
 │       │   └── models/
 │       │       └── schemas.py        # Pydantic request/response models
 │       │
+│       ├── tests/                    # Unit tests for backend services (see TESTING_GUIDE.md)
+│       │
 │       ├── requirements.txt          # Python dependencies
 │       ├── Dockerfile                # Container for deployment
 │       └── .dockerignore             # Exclude files from Docker image
@@ -314,12 +325,14 @@ rag-knowledge-hub/
     ├── ingest_notion.py              # Main script: syncs Notion → Database
     ├── requirements.txt              # Worker dependencies
     │
-    └── lib/
-        ├── notion_client.py          # Notion API wrapper
-        ├── normalizer.py             # Convert Notion blocks → Markdown
-        ├── chunker.py                # Split text into 300-700 token chunks
-        ├── embeddings.py             # Embed chunks with Cohere
-        └── db_operations.py          # Upsert documents and chunks to DB
+    ├── lib/
+    │   ├── notion_client.py          # Notion API wrapper
+    │   ├── normalizer.py             # Convert Notion blocks → Markdown
+    │   ├── chunker.py                # Split text into 300-700 token chunks
+    │   ├── embeddings.py             # Embed chunks with Cohere
+    │   └── db_operations.py          # Upsert documents and chunks to DB
+    │
+    └── tests/                        # Unit tests for worker functions (see TESTING_GUIDE.md)
 ```
 
 ---
