@@ -8,11 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Home,
   MessageSquare,
-  Calendar,
-  FolderKanban,
   FileText,
-  Users,
-  Settings,
   HelpCircle,
   Paperclip,
   Send,
@@ -20,18 +16,9 @@ import {
 import { cn } from "@/lib/utils"
 import { DocumentsTab } from "@/components/documents-tab"
 import HomeDashboard from "@/components/home-dashboard"
-//import ManagerInterface from "@/components/manager-interface"
 import LoginPage from "@/components/login-page"
 
-type TabType =
-  | "home"
-  | "chat"
-  | "meetings"
-  | "projects"
-  | "documents"
-  | "directory"
-  | "settings"
-  | "manager"
+type TabType = "home" | "chat" | "documents"
 
 interface Message {
   id: number
@@ -57,7 +44,8 @@ export default function KnowledgeHub() {
     {
       id: 3,
       sender: "ai",
-      content: "Please provide access to the Q3 report first. Would you like me to find it in the Documents tab?",
+      content:
+        "Please provide access to the Q3 report first. Would you like me to find it in the Documents tab?",
       actions: [{ label: "View Q3 Report in Documents", type: "document" }],
     },
   ])
@@ -95,26 +83,30 @@ export default function KnowledgeHub() {
     }, 1000)
   }
 
-  // إذا المستخدم لم يسجل الدخول، نعرض صفحة اللوق إن
   if (!isLoggedIn) {
     return <LoginPage onLogin={() => setIsLoggedIn(true)} />
   }
 
-  // بعد تسجيل الدخول، نعرض الداشبورد الكامل كما هو مع التابز
   return (
     <div className="flex h-screen bg-background">
-      {/* Left Sidebar */}
+      {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-card flex flex-col">
         <div className="p-6 border-b border-border">
-          <h1 className="text-xl font-semibold mb-4" style={{ color: "#70CFDC" }}>KnowledgeHub </h1>
+          <h1 className="text-xl font-semibold mb-4" style={{ color: "#70CFDC" }}>
+            KnowledgeHub
+          </h1>
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage src="/professional-woman-diverse.png" />
               <AvatarFallback>اسم</AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-medium" style={{ color: "#70CFDC" }}>اسم المستخدم </p>
-              <p className="text-xs" style={{ color: "#70CFDC" }}>وظيفته</p>
+              <p className="text-sm font-medium" style={{ color: "#70CFDC" }}>
+                اسم المستخدم
+              </p>
+              <p className="text-xs" style={{ color: "#70CFDC" }}>
+                وظيفته
+              </p>
             </div>
           </div>
         </div>
@@ -131,8 +123,8 @@ export default function KnowledgeHub() {
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-[#70CFDC] text-white" // ✅ لون التاب عند الضغط
-                        : "text-[#70CFDC] hover:bg-[#70CFDC] hover:text-white" // ✅ لون الخط بدون ضغط + hover
+                        ? "bg-[#70CFDC] text-white"
+                        : "text-[#70CFDC] hover:bg-[#70CFDC] hover:text-white"
                     )}
                   >
                     <Icon className="h-5 w-5" />
@@ -152,7 +144,7 @@ export default function KnowledgeHub() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-1 flex flex-col">
         {activeTab === "home" ? (
           <HomeDashboard />
@@ -161,34 +153,68 @@ export default function KnowledgeHub() {
             <header className="border-b border-border bg-card px-6 py-4">
               <h2 className="text-lg font-semibold text-foreground">AI Assistant</h2>
             </header>
+
+            {/* Chat Area */}
             <ScrollArea className="flex-1 p-6">
               <div className="max-w-4xl mx-auto space-y-4">
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={cn("flex", message.sender === "user" ? "justify-end" : "justify-start")}
+                    className={cn(
+                      "flex items-start gap-3",
+                      message.sender === "user" ? "justify-end" : "justify-start"
+                    )}
                   >
+                    {/* 🧠 Avatar للسستم */}
+                    {message.sender === "ai" && (
+                      <img
+                        src="/charachter_icon.png"
+                        alt="AI Assistant"
+                        className="w-10 h-10 rounded-full border border-gray-200"
+                      />
+                    )}
+
+                    {/* 💬 فقاعة الرسالة */}
                     <div
                       className={cn(
                         "max-w-[70%] rounded-2xl px-4 py-3",
-                        message.sender === "ai" ? "bg-[#F0F4F9] text-foreground" : "bg-[#E0E7FF] text-foreground",
+                        message.sender === "ai"
+                          ? "bg-[#F0F4F9] text-foreground"
+                          : "bg-[#E0E7FF] text-foreground"
                       )}
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
+
                       {message.actions && message.actions.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {message.actions.map((action, idx) => (
-                            <Button key={idx} variant="outline" size="sm" className="text-xs bg-white hover:bg-gray-50">
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="text-xs bg-white hover:bg-gray-50"
+                            >
                               {action.label}
                             </Button>
                           ))}
                         </div>
                       )}
                     </div>
+
+                    {/* 👤 Avatar لليوزر */}
+                    {message.sender === "user" && (
+                      <img
+                        src="/person_icon.png"
+                        alt="User Avatar"
+                        className="w-10 h-10 rounded-full border border-gray-200"
+                      />
+                    )}
                   </div>
                 ))}
               </div>
             </ScrollArea>
+
+            {/* Chat Input */}
             <div className="border-t border-border bg-card p-4">
               <div className="max-w-4xl mx-auto">
                 <div className="flex items-end gap-2 bg-background border border-border rounded-xl p-2">
@@ -216,22 +242,8 @@ export default function KnowledgeHub() {
               </div>
             </div>
           </>
-        ) : activeTab === "documents" ? (
-          <DocumentsTab />
         ) : (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="text-center max-w-md">
-              <h2 className="text-2xl font-semibold mb-3 text-foreground">
-                {activeTab === "directory" && "Team Directory"}
-                {activeTab === "settings" && "Settings"}
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                {activeTab === "directory" &&
-                  "Find employee contact information and team details. The AI can help you connect with colleagues."}
-                {activeTab === "settings" && "Customize your preferences and account settings."}
-              </p>
-            </div>
-          </div>
+          <DocumentsTab />
         )}
       </main>
     </div>
