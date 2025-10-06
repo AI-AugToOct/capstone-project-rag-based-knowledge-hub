@@ -1,16 +1,18 @@
 """
 Database Client
 
-This module provides a connection pool to PostgreSQL using asyncpg.
-All database queries go through this client.
+Provides PostgreSQL connection pool using asyncpg.
 """
+
 
 import asyncpg
 import os
 from typing import List, Dict, Any, Optional
 
+from dotenv import load_dotenv
+load_dotenv()  # loads .env from current working dir
 
-# Global connection pool (initialized on startup)
+# Global pool
 pool: Optional[asyncpg.Pool] = None
 
 
@@ -149,7 +151,6 @@ async def fetch_one(query: str, *args) -> Optional[Dict[str, Any]]:
         row = await connection.fetchrow(query, *args)
         return dict(row) if row else None
 
-
 async def fetch_all(query: str, *args) -> List[Dict[str, Any]]:
     """
     Executes a SELECT query and returns all rows.
@@ -200,6 +201,26 @@ async def fetch_all(query: str, *args) -> List[Dict[str, Any]]:
         return [dict(row) for row in rows]
 
 
+async def fetch_all_documents(include_private: bool = False) -> List[Dict[str, Any]]:
+    """Return documents depending on visibility"""
+    if include_private:
+        query = """
+            SELECT doc_id, title, uri, visibility
+            FROM documents
+            WHERE deleted_at IS NULL
+            ORDER BY doc_id DESC
+        """
+        return await fetch_all(query)
+    else:
+        query = """
+            SELECT doc_id, title, uri, visibility
+            FROM documents
+            WHERE deleted_at IS NULL AND visibility = 'Public'
+            ORDER BY doc_id DESC
+        """
+        return await fetch_all(query)
+
+
 async def execute(query: str, *args) -> str:
     """
     Executes an INSERT, UPDATE, or DELETE query.
@@ -236,6 +257,8 @@ async def execute(query: str, *args) -> str:
     async with pool.acquire() as connection:
         status = await connection.execute(query, *args)
         return status
+
+
 
 
 # Example Usage in Services:

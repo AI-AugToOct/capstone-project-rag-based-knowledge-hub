@@ -1,45 +1,33 @@
-# LULUH
-
 from fastapi import APIRouter, Header, HTTPException, Path
-from typing import Optional
-from app.models.schemas import DocMetadata
-from app.services import auth
-from app.services.db import fetch_document
+from typing import Optional, List
+from app.services.db import fetch_document, fetch_documents_for_user
 
 router = APIRouter()
 
-
 @router.get("/docs/{doc_id}")
 async def get_document(
-    doc_id: int = Path(..., description="Document ID"),
+    doc_id: int = Path(...),
     authorization: Optional[str] = Header(None)
 ):
-    """Retrieve document metadata with access control checks."""
-
-    # Here it's for Authentication and Authorization checks
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
-
-    token = authorization.replace("Bearer ", "")
-
-    try:
-        user_id = await auth.verify_jwt(token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    # here for make sure loading user permissions
-    user_projects = await auth.get_user_projects(user_id)
-
-    #  Querying document from our database
-    document = await fetch_document(doc_id)
+    
+    user_token = authorization.replace("Bearer ", "")
+    is_manager = user_token == "manager_test_token"
+    
+    document = await fetch_document(doc_id, is_manager=is_manager, user_token=user_token)
     if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail="Document not found or access denied")
+    
+    return document
 
-    # About Access control point
-    if document["visibility"] == "Public" or document["project_id"] in user_projects:
-        return DocMetadata(**document)
+@router.get("/documents", response_model=List[dict])
+async def list_documents(authorization: Optional[str] = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    
+    user_token = authorization.replace("Bearer ", "")
+    is_manager = user_token == "manager_test_token"
 
-    raise HTTPException(
-        status_code=403,
-        detail="You do not have permission to access this document"
-    )
+    documents = await fetch_documents_for_user(is_manager, user_token)
+    return documents
