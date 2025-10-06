@@ -45,7 +45,7 @@ async def search(
 
     # --------- Step 5: Vector Search with ACL ---------
     try:
-        candidate_chunks = retrieval.run_vector_search(
+        candidate_chunks = await retrieval.run_vector_search(
             query_vector=query_vector,
             user_projects=user_projects,
             top_k=200
@@ -56,7 +56,7 @@ async def search(
     # --------- Step 6: Rerank ---------
     try:
         top_k = request.top_k or 12
-        chunks = retrieval.rerank(candidate_chunks, request.query, top_k=top_k)
+        chunks = await retrieval.rerank(candidate_chunks, request.query, top_k=top_k)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Rerank failed: {e}")
 

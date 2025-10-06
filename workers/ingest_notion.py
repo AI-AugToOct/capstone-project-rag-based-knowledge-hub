@@ -10,6 +10,7 @@ Run this script manually or via cron/scheduler to sync Notion content.
 import argparse
 import hashlib
 from lib import notion_client, normalizer, chunker, embeddings, db_operations
+from lib.constants import CHUNK_SIZE, CHUNK_OVERLAP
 
 
 def compute_content_hash(markdown: str) -> str:
@@ -133,7 +134,7 @@ def ingest_page(page: dict):
 
     # Step 7: Chunk the document
     print("   ├─ Chunking document...")
-    chunks = chunker.chunk_markdown(markdown, sections, chunk_size=500, chunk_overlap=50)
+    chunks = chunker.chunk_markdown(markdown, sections, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     print(f"   ├─ Created {len(chunks)} chunks")
 
     # Step 8: Embed and insert each chunk

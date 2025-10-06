@@ -7,9 +7,12 @@ This is the main file that creates and configures the FastAPI app.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from dotenv import load_dotenv
 
-# Uncomment when routes are implemented:
-# from app.api.routes import search, docs
+# Load environment variables from apps/backend/.env
+load_dotenv()
+
+from app.api.routes import search, docs, upload, notion
 from app.db.client import init_db_pool, close_db_pool
 
 
@@ -83,9 +86,10 @@ async def shutdown():
 
 
 # Include API routes
-# Uncomment when routes are implemented:
-# app.include_router(search.router, prefix="/api", tags=["Search"])
-# app.include_router(docs.router, prefix="/api", tags=["Documents"])
+app.include_router(search.router, prefix="/api", tags=["Search"])
+app.include_router(docs.router, prefix="/api", tags=["Documents"])
+app.include_router(upload.router, prefix="/api", tags=["Upload"])
+app.include_router(notion.router, prefix="/api", tags=["Notion"])
 
 
 # Health check endpoint (for monitoring)

@@ -10,6 +10,7 @@ Same as backend embeddings, but with input_type="search_document" instead of "se
 from typing import List
 import os
 import cohere
+from .constants import EMBEDDING_MODEL
 
 def embed_text(text: str) -> List[float]:
     
@@ -24,10 +25,10 @@ def embed_text(text: str) -> List[float]:
         client = cohere.Client(api_key)
         response = client.embed(
             texts=[text],
-            model="embed-english-v3.0",
-            input_type="search_document"  
+            model=EMBEDDING_MODEL,
+            input_type="search_document"
         )
-        # نرجع المصفوفه الاولى علشان نبي نص واحد 
+        # نرجع المصفوفه الاولى علشان نبي نص واحد
         return response.embeddings[0]
 
     except Exception as e:

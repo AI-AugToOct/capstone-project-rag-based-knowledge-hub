@@ -265,9 +265,11 @@ rag-knowledge-hub/
 │   │   │   ├── SourcesList.tsx       # Show document citations
 │   │   │   ├── Navbar.tsx            # Navigation bar
 │   │   │   ├── theme-provider.tsx    # Dark mode provider
-│   │   │   │
-│   │   │   ├── documents-tab.tsx     # [Optional] Browse all searchable documents
-│   │   │   └── projects-tab.tsx      # [Optional] View user's project memberships
+│   │   │   ├── home-dashboard.tsx    # Home/Dashboard view
+│   │   │   ├── manager-interface.tsx # Manager file upload interface
+│   │   │   ├── meetings-tab.tsx      # Meetings view
+│   │   │   ├── documents-tab.tsx     # Browse all searchable documents
+│   │   │   └── projects-tab.tsx      # View user's project memberships
 │   │   │
 │   │   ├── lib/
 │   │   │   ├── utils.ts              # Utility functions (cn, etc.)
@@ -296,6 +298,10 @@ rag-knowledge-hub/
 │   └── backend/                      # FastAPI backend (Python)
 │       ├── app/
 │       │   ├── main.py               # FastAPI app entry (CORS, routers, startup)
+│       │   │
+│       │   ├── core/
+│       │   │   ├── __init__.py       # Core package init
+│       │   │   └── constants.py      # Shared constants (embedding model, dimensions, etc.)
 │       │   │
 │       │   ├── api/
 │       │   │   └── routes/
@@ -326,6 +332,8 @@ rag-knowledge-hub/
     ├── requirements.txt              # Worker dependencies
     │
     ├── lib/
+    │   ├── __init__.py               # Workers package init
+    │   ├── constants.py              # Shared constants (embedding model, chunk size, etc.)
     │   ├── notion_client.py          # Notion API wrapper
     │   ├── normalizer.py             # Convert Notion blocks → Markdown
     │   ├── chunker.py                # Split text into 300-700 token chunks

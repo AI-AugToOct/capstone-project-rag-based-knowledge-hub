@@ -9,6 +9,7 @@ Embeddings are numerical representations of text that capture semantic meaning.
 from typing import List
 import os
 import cohere
+from app.core.constants import EMBEDDING_MODEL, EMBEDDING_DIM
 
 #from dotenv import load_dotenv  #for load env. variables
 #load_dotenv()
@@ -39,23 +40,71 @@ def embed_query(text: str) -> List[float]:
         # 3.1. Call Cohere Embeddings API
         response = client.embed(
             texts=[text],
-            model="embed-english-v3.0",
+            model=EMBEDDING_MODEL,
             input_type="search_query"
         )
         # 4. Extracts the embedding vector from the response
         embedding = response.embeddings[0]
 
-        # 5. Ensure embedding has 1024 elements
-        if len(embedding) != 1024:
-            raise ValueError(f"Unexpected embedding size: {len(embedding)}")
-        
+        # 5. Ensure embedding has correct dimensions
+        if len(embedding) != EMBEDDING_DIM:
+            raise ValueError(f"Unexpected embedding size: {len(embedding)}, expected {EMBEDDING_DIM}")
+
         return embedding
 
     except Exception as e:
         raise Exception(f"Failed to get embedding from Cohere API: {e}")
 
 
-#just for check after 
+def embed_document(text: str) -> List[float]:
+    """
+    Converts document text into a 1024-dimensional vector embedding.
+
+    This is used when indexing documents (upload), whereas embed_query() is for search.
+
+    Args:
+        text (str): Document chunk text to embed
+
+    Returns:
+        List[float]: 1024-dimensional vector
+
+    Raises:
+        ValueError: If text is empty
+        Exception: If Cohere API call fails
+    """
+    # 1. Validate input
+    if not text or not text.strip():
+        raise ValueError("Document text cannot be empty or None.")
+
+    # 2. Get API key
+    api_key = os.getenv("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("Cohere API key not found in environment variables.")
+
+    # 3. Call Cohere client
+    client = cohere.Client(api_key)
+
+    try:
+        # Note: input_type="search_document" for indexing (different from queries)
+        response = client.embed(
+            texts=[text],
+            model=EMBEDDING_MODEL,
+            input_type="search_document"
+        )
+
+        embedding = response.embeddings[0]
+
+        # 4. Validate dimensions
+        if len(embedding) != EMBEDDING_DIM:
+            raise ValueError(f"Unexpected embedding size: {len(embedding)}, expected {EMBEDDING_DIM}")
+
+        return embedding
+
+    except Exception as e:
+        raise Exception(f"Failed to embed document: {e}")
+
+
+#just for check after
 # if __name__ == "__main__":
 #     query = "How do I deploy the Atlas API?"
 #     vector = embed_query(query)

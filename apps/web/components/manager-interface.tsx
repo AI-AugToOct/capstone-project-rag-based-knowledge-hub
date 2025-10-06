@@ -3,16 +3,32 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getAccessToken } from "@/lib/supabase"
+
+interface Document {
+  doc_id: number
+  title: string
+  visibility: string
+  project_id?: string | null
+  created_at?: string | null
+}
 
 export default function ManagerInterface() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadStatus, setUploadStatus] = useState("")
-  const [documents, setDocuments] = useState<string[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [visibility, setVisibility] = useState<string>("Public")
+  const [projectId, setProjectId] = useState<string>("")
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0])
+      setUploadStatus("") // Clear previous status
     }
   }
 
@@ -23,35 +39,80 @@ export default function ManagerInterface() {
       return
     }
 
-    const formData = new FormData()
-    formData.append("file", selectedFile)
+    setIsUploading(true)
+    setUploadStatus("📤 Uploading and indexing...")
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/upload", {
+      // Get JWT token
+      const token = await getAccessToken()
+      if (!token) {
+        setUploadStatus("⚠️ Please log in first.")
+        setIsUploading(false)
+        return
+      }
+
+      // Prepare form data
+      const formData = new FormData()
+      formData.append("file", selectedFile)
+      formData.append("visibility", visibility)
+      if (projectId.trim()) {
+        formData.append("project_id", projectId.trim())
+      }
+
+      // Upload file
+      const res = await fetch("http://127.0.0.1:8000/api/upload", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       })
 
       if (res.ok) {
-        setUploadStatus("✅ File uploaded successfully!")
+        const data = await res.json()
+        setUploadStatus(
+          `✅ ${data.message}\n` +
+          `📄 Document ID: ${data.doc_id}\n` +
+          `📊 Chunks created: ${data.chunks_created}/${data.total_chunks}`
+        )
         setSelectedFile(null)
+        setProjectId("")
         fetchDocuments() // refresh list after upload
       } else {
-        setUploadStatus("❌ Upload failed.")
+        const error = await res.json().catch(() => ({ detail: "Upload failed" }))
+        setUploadStatus(`❌ ${error.detail}`)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      setUploadStatus("⚠️ Error connecting to backend.")
+      setUploadStatus(`⚠️ Error: ${err.message}`)
+    } finally {
+      setIsUploading(false)
     }
   }
 
   // Fetch uploaded documents
   const fetchDocuments = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/documents")
-      const data = await res.json()
-      if (Array.isArray(data)) {
-        setDocuments(data)
+      // Get JWT token
+      const token = await getAccessToken()
+      if (!token) {
+        console.log("Not logged in, skipping document fetch")
+        return
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/documents", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setDocuments(data)
+        }
+      } else {
+        console.error("Failed to fetch documents:", res.status)
       }
     } catch (err) {
       console.error("Error fetching documents:", err)
@@ -71,14 +132,59 @@ export default function ManagerInterface() {
         <CardHeader>
           <CardTitle>Upload a new file</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <input type="file" onChange={handleFileChange} />
-          <Button onClick={handleUpload} className="w-32">
-            Upload
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="file">File (PDF, DOCX, TXT, MD)</Label>
+            <input
+              id="file"
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf,.docx,.txt,.md"
+              disabled={isUploading}
+              className="w-full mt-1"
+            />
+            {selectedFile && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Selected: {selectedFile.name}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="visibility">Visibility</Label>
+            <Select value={visibility} onValueChange={setVisibility} disabled={isUploading}>
+              <SelectTrigger id="visibility" className="w-full">
+                <SelectValue placeholder="Select visibility" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Public">Public (all employees)</SelectItem>
+                <SelectItem value="Private">Private (project members only)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="project_id">Project ID (optional)</Label>
+            <Input
+              id="project_id"
+              type="text"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder="e.g., atlas-project"
+              disabled={isUploading}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Leave empty for general knowledge base
+            </p>
+          </div>
+
+          <Button onClick={handleUpload} disabled={isUploading || !selectedFile} className="w-32">
+            {isUploading ? "Uploading..." : "Upload"}
           </Button>
+
           {uploadStatus && (
             <p
-              className={`text-sm ${
+              className={`text-sm whitespace-pre-wrap ${
                 uploadStatus.startsWith("✅")
                   ? "text-green-600"
                   : uploadStatus.startsWith("❌")
@@ -101,13 +207,26 @@ export default function ManagerInterface() {
           {documents.length === 0 ? (
             <p className="text-sm text-gray-500">No documents uploaded yet.</p>
           ) : (
-            <ul className="list-disc list-inside space-y-1">
-              {documents.map((doc, index) => (
-                <li key={index} className="text-sm text-gray-700">
-                  {doc}
-                </li>
+            <div className="space-y-2">
+              {documents.map((doc) => (
+                <div key={doc.doc_id} className="p-3 border rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-sm">{doc.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        ID: {doc.doc_id} • {doc.visibility}
+                        {doc.project_id && ` • Project: ${doc.project_id}`}
+                      </p>
+                    </div>
+                    {doc.created_at && (
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </CardContent>
       </Card>

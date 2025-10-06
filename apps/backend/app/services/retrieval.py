@@ -220,7 +220,7 @@ async def run_vector_search(
 #ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
 #ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
 
-def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Dict[str, Any]]:
+async def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Dict[str, Any]]:
     """
     Reranks chunks using Cohere's reranker model for better relevance.
     """
@@ -231,14 +231,14 @@ def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Di
     if not api_key:
         raise ValueError("Cohere API key not found in environment variables.")
 
-    client = cohere.Client(api_key)
+    client = cohere.AsyncClient(api_key)
 
     try:
         # 1. Takes the 200 candidates from vector search
         documents = [c["text"] for c in chunks]
 
         # 2. Calls Cohere's rerank
-        response = client.rerank(
+        response = await client.rerank(
             query=query,
             documents=documents,
             model="rerank-english-v3.0",

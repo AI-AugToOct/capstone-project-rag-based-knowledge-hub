@@ -22,7 +22,9 @@ import { DocumentsTab } from "@/components/documents-tab"
 import { ProjectsTab } from "@/components/projects-tab"
 import { MeetingsTab } from "@/components/meetings-tab"
 import HomeDashboard from "@/components/home-dashboard"
-import ManagerInterface from "@/components/manager-interface"   // ✅ Import fixed to default import
+import ManagerInterface from "@/components/manager-interface"
+import { searchKnowledge } from "@/lib/api"
+import { Chunk } from "@/types"
 
 type TabType =
   | "home"
@@ -32,13 +34,13 @@ type TabType =
   | "documents"
   | "directory"
   | "settings"
-  | "manager"   // ✅ Added "manager"
+  | "manager"
 
 interface Message {
   id: number
   sender: "ai" | "user"
   content: string
-  actions?: Array<{ label: string; type: string }>
+  chunks?: Chunk[]
 }
 
 export default function KnowledgeHub() {
@@ -49,19 +51,9 @@ export default function KnowledgeHub() {
       sender: "ai",
       content: "Welcome to your KnowledgeHub assistant. How can I help you today?",
     },
-    {
-      id: 2,
-      sender: "user",
-      content: "Summarize the Q3 financial report.",
-    },
-    {
-      id: 3,
-      sender: "ai",
-      content: "Please provide access to the Q3 report first. Would you like me to find it in the Documents tab?",
-      actions: [{ label: "View Q3 Report in Documents", type: "document" }],
-    },
   ])
   const [inputMessage, setInputMessage] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   const navItems = [
     { id: "home" as TabType, label: "Home", icon: Home },
@@ -74,31 +66,46 @@ export default function KnowledgeHub() {
     { id: "manager" as TabType, label: "Manager Interface", icon: Users }, // ✅ Added Manager tab
   ]
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return
 
-    const newMessage: Message = {
-      id: messages.length + 1,
+    const userMessage: Message = {
+      id: Date.now(),
       sender: "user",
       content: inputMessage,
     }
 
-    setMessages([...messages, newMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInputMessage("")
+    setIsLoading(true)
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: messages.length + 2,
+    try {
+      // Call real API
+      const result = await searchKnowledge(inputMessage)
+
+      const aiMessage: Message = {
+        id: Date.now() + 1,
         sender: "ai",
-        content: "I understand your request. Let me help you with that.",
-        actions: [
-          { label: "Create Meeting", type: "meeting" },
-          { label: "Suggest a New Meeting", type: "meeting" },
-        ],
+        content: result.answer,
+        chunks: result.chunks,
       }
-      setMessages((prev) => [...prev, aiResponse])
-    }, 1000)
+
+      setMessages((prev) => [...prev, aiMessage])
+    } catch (error: any) {
+      // Error handling
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        sender: "ai",
+        content: error.message.includes("authenticated")
+          ? "⚠️ Please log in to use the search feature."
+          : error.message.includes("permission")
+          ? "⚠️ You don't have permission to access this content."
+          : `⚠️ Search failed: ${error.message}`,
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -169,31 +176,50 @@ export default function KnowledgeHub() {
             <ScrollArea className="flex-1 p-6">
               <div className="max-w-4xl mx-auto space-y-4">
                 {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn("flex", message.sender === "user" ? "justify-end" : "justify-start")}
-                  >
+                  <div key={message.id} className="space-y-2">
                     <div
-                      className={cn(
-                        "max-w-[70%] rounded-2xl px-4 py-3",
-                        message.sender === "ai" ? "bg-[#F0F4F9] text-foreground" : "bg-[#E0E7FF] text-foreground",
-                      )}
+                      className={cn("flex", message.sender === "user" ? "justify-end" : "justify-start")}
                     >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
-
-                      {/* Dynamic Interactive Elements */}
-                      {message.actions && message.actions.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {message.actions.map((action, idx) => (
-                            <Button key={idx} variant="outline" size="sm" className="text-xs bg-white hover:bg-gray-50">
-                              {action.label}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
+                      <div
+                        className={cn(
+                          "max-w-[70%] rounded-2xl px-4 py-3",
+                          message.sender === "ai" ? "bg-[#F0F4F9] text-foreground" : "bg-[#E0E7FF] text-foreground",
+                        )}
+                      >
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      </div>
                     </div>
+
+                    {/* Citations */}
+                    {message.sender === "ai" && message.chunks && message.chunks.length > 0 && (
+                      <div className="ml-4 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Sources ({message.chunks.length})
+                        </p>
+                        {message.chunks.slice(0, 3).map((chunk, idx) => (
+                          <a
+                            key={idx}
+                            href={chunk.uri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-xs text-primary hover:underline truncate"
+                          >
+                            {idx + 1}. {chunk.title} ({Math.round(chunk.score * 100)}%)
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
+
+                {/* Loading indicator */}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-[#F0F4F9] rounded-2xl px-4 py-3">
+                      <p className="text-sm text-muted-foreground">Searching knowledge base...</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
@@ -215,10 +241,16 @@ export default function KnowledgeHub() {
                       }
                     }}
                     placeholder="Message the AI assistant..."
+                    disabled={isLoading}
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-[40px]"
                   />
 
-                  <Button onClick={handleSendMessage} size="icon" className="shrink-0 rounded-lg">
+                  <Button
+                    onClick={handleSendMessage}
+                    size="icon"
+                    className="shrink-0 rounded-lg"
+                    disabled={isLoading || !inputMessage.trim()}
+                  >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>

@@ -17,7 +17,7 @@ export default function HomeDashboard() {
   useEffect(() => {
     async function fetchTasks() {
       try {
-        const response = await fetch("http://127.0.0.1:8000/notion-tasks")
+        const response = await fetch("http://127.0.0.1:8000/api/notion-tasks")
         const data = await response.json()
         setNotionTasks(data)
       } catch (error) {

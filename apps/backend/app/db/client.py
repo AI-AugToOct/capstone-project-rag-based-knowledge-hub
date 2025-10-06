@@ -67,8 +67,8 @@ async def init_db_pool():
 
     pool = await asyncpg.create_pool(
         database_url,
-        min_size=10,
-        max_size=20,
+        min_size=1,
+        max_size=5,
         command_timeout=60
     )
 
@@ -104,6 +104,26 @@ async def close_db_pool():
     if pool:
         await pool.close()
         print("✅ Database connection pool closed")
+
+
+def get_db_pool() -> asyncpg.Pool:
+    """
+    Returns the database connection pool.
+
+    Returns:
+        asyncpg.Pool: The database connection pool
+
+    Raises:
+        Exception: If pool is not initialized
+
+    Example:
+        >>> pool = get_db_pool()
+        >>> async with pool.acquire() as conn:
+        >>>     result = await conn.fetch("SELECT * FROM users")
+    """
+    if pool is None:
+        raise Exception("Database pool not initialized. Call init_db_pool() first.")
+    return pool
 
 
 async def fetch_one(query: str, *args) -> Optional[Dict[str, Any]]:
