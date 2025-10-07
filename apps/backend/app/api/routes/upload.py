@@ -11,6 +11,7 @@ from app.services import auth, extraction
 from app.services.embeddings import embed_document
 from app.services.db import insert_document, insert_chunk
 from app.services.chunker import chunk_markdown
+from app.services.storage import upload_file_to_storage
 from app.core.constants import CHUNK_SIZE, CHUNK_OVERLAP, VALID_VISIBILITIES
 import uuid
 
@@ -87,16 +88,23 @@ async def upload_document(
     if not markdown.strip():
         raise HTTPException(status_code=400, detail="Extracted document is empty")
 
-    # --------- Step 5: Create Document Record ---------
-    # Generate unique doc_uri (we don't have a real URI for uploaded files only notion)
-    doc_uri = f"upload://{uuid.uuid4()}/{file.filename}"
+    # --------- Step 5: Upload File to Storage ---------
+    try:
+        file_url = upload_file_to_storage(
+            file_bytes=file_bytes,
+            filename=file.filename,
+            project_id=project_id
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file to storage: {e}")
 
+    # --------- Step 6: Create Document Record ---------
     try:
         doc_id = await insert_document(
             title=file.filename,
             project_id=project_id,
             visibility=visibility,
-            uri=doc_uri,
+            uri=file_url,  # Use storage URL instead of fake URI
             language="en"
         )
     except Exception as e:
@@ -115,7 +123,7 @@ async def upload_document(
     chunks_created = 0
     errors = []
 
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks):
         try:
             # Embed chunk
             embedding = embed_document(chunk["text"])
@@ -125,12 +133,13 @@ async def upload_document(
                 doc_id=doc_id,
                 text=chunk["text"],
                 heading_path=chunk["heading_path"],
-                embedding=embedding
+                embedding=embedding,
+                order_in_doc=idx
             )
 
             chunks_created += 1
         except Exception as e:
-            errors.append(f"Chunk {chunks_created + 1}: {str(e)}")
+            errors.append(f"Chunk {idx + 1}: {str(e)}")
             # Continue processing other chunks even if one fails
 
     # --------- Step 8: Return Response ---------
@@ -184,9 +193,10 @@ async def list_documents(
 
         async with pool.acquire() as conn:
             rows = await conn.fetch("""
-                SELECT doc_id, title, visibility, project_id, created_at
+                SELECT doc_id, title, visibility, project_id, updated_at, uri
                 FROM documents
-                ORDER BY created_at DESC
+                WHERE deleted_at IS NULL
+                ORDER BY updated_at DESC
                 LIMIT 100
             """)
 
@@ -196,7 +206,8 @@ async def list_documents(
                 "title": row["title"],
                 "visibility": row["visibility"],
                 "project_id": row["project_id"],
-                "created_at": row["created_at"].isoformat() if row["created_at"] else None
+                "created_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+                "uri": row["uri"]
             }
             for row in rows
         ]

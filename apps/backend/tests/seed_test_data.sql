@@ -53,9 +53,77 @@ VALUES
     )
 ON CONFLICT (chunk_id) DO NOTHING;
 
+-- 6. Create second test employee (for handover recipient)
+INSERT INTO employees (employee_id, email, display_name)
+VALUES ('660e8400-e29b-41d4-a716-446655440001', 'recipient@example.com', 'Recipient User')
+ON CONFLICT (employee_id) DO NOTHING;
+
+-- 7. Create test handovers
+INSERT INTO handovers (
+    handover_id,
+    from_employee_id,
+    to_employee_id,
+    title,
+    project_id,
+    context,
+    current_status,
+    next_steps,
+    resources,
+    contacts,
+    additional_notes,
+    status,
+    created_at
+)
+VALUES
+    (
+        1,
+        '550e8400-e29b-41d4-a716-446655440000',
+        '660e8400-e29b-41d4-a716-446655440001',
+        'Atlas Project Handover',
+        'Atlas',
+        'Transferring Atlas project knowledge before moving to Phoenix team',
+        'API deployed, documentation updated, monitoring configured',
+        '[{"task": "Review deployment checklist", "done": false}, {"task": "Schedule knowledge transfer meeting", "done": false}]'::jsonb,
+        '[{"type": "doc", "doc_id": 1, "title": "Atlas Deploy Guide"}, {"type": "link", "url": "https://notion.so/atlas-runbook", "title": "Atlas Runbook"}]'::jsonb,
+        '[{"name": "Sarah Khan", "email": "sarah@example.com", "role": "Team Lead"}]'::jsonb,
+        'Please prioritize the deployment checklist review',
+        'pending',
+        NOW() - INTERVAL '2 hours'
+    ),
+    (
+        2,
+        '660e8400-e29b-41d4-a716-446655440001',
+        '550e8400-e29b-41d4-a716-446655440000',
+        'Phoenix Setup Handover',
+        'Phoenix',
+        'Onboarding to Phoenix project',
+        'Environment setup completed',
+        '[{"task": "Review architecture docs", "done": true}, {"task": "Set up local dev environment", "done": true}]'::jsonb,
+        '[{"type": "link", "url": "https://github.com/phoenix", "title": "Phoenix Repo"}]'::jsonb,
+        '[{"name": "Omar Amari", "email": "omar@example.com", "role": "Tech Lead"}]'::jsonb,
+        NULL,
+        'acknowledged',
+        NOW() - INTERVAL '1 day'
+    )
+ON CONFLICT (handover_id) DO NOTHING;
+
+-- 8. Create test chunks for handovers (for search testing)
+INSERT INTO chunks (chunk_id, handover_id, heading_path, order_in_doc, text, embedding)
+VALUES
+    (
+        3,
+        1,
+        ARRAY['Handover', 'Atlas Project'],
+        1,
+        'Atlas Project Handover: Transferring Atlas project knowledge. Current status: API deployed, documentation updated. Next steps: Review deployment checklist.',
+        ARRAY(SELECT 0.15::real FROM generate_series(1, 1024))::vector
+    )
+ON CONFLICT (chunk_id) DO NOTHING;
+
 -- Reset sequences to prevent ID conflicts
 SELECT setval('documents_doc_id_seq', (SELECT MAX(doc_id) FROM documents), true);
 SELECT setval('chunks_chunk_id_seq', (SELECT MAX(chunk_id) FROM chunks), true);
+SELECT setval('handovers_handover_id_seq', (SELECT MAX(handover_id) FROM handovers), true);
 
 -- Verify data was inserted
 SELECT 'Employees:', COUNT(*) FROM employees;
@@ -63,3 +131,4 @@ SELECT 'Projects:', COUNT(*) FROM projects;
 SELECT 'Employee-Projects:', COUNT(*) FROM employee_projects;
 SELECT 'Documents:', COUNT(*) FROM documents;
 SELECT 'Chunks:', COUNT(*) FROM chunks;
+SELECT 'Handovers:', COUNT(*) FROM handovers;

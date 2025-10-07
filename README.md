@@ -1,106 +1,169 @@
-# RAG Knowledge Hub
+# RAG Knowledge Hub with Employee Handovers
 
-> A permission-aware knowledge search system: authenticated users ask questions → we retrieve only content they're allowed to see → LLM answers with citations.
+> **Enterprise RAG system with permission-aware search, document management, and knowledge handover capabilities.**
 
 [![Built with Next.js](https://img.shields.io/badge/Next.js-14+-black)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688)](https://fastapi.tiangolo.com/)
 [![Postgres](https://img.shields.io/badge/PostgreSQL-15+-336791)](https://www.postgresql.org/)
+[![pgvector](https://img.shields.io/badge/pgvector-0.5+-blue)](https://github.com/pgvector/pgvector)
 
 ---
 
 ## 📖 Overview
 
-RAG Knowledge Hub is an enterprise knowledge search platform that combines the power of vector search with fine-grained access control. Think of it as "ChatGPT for your company's internal documents" — but with security built-in from day one.
+**RAG Knowledge Hub** is an intelligent enterprise search platform that combines:
+- **Permission-aware vector search** with pgvector and HNSW indexing
+- **LLM-powered answers** with citations using Groq (Llama 3.3, Mixtral, ChatGPT-OSS)
+- **Employee knowledge handovers** for seamless onboarding and transitions
+- **Notion integration** for automated document ingestion
+- **Strict access control** based on project memberships and roles
 
-**The Problem:** Teams have knowledge scattered across Notion, Google Drive, Confluence, and internal wikis. Finding information requires knowing where to look and having the right permissions.
+**Think of it as:** "ChatGPT for your company's internal documents" + "Knowledge handover system for employee transitions" — with security and compliance built-in.
 
-**Our Solution:** A unified search interface that:
-- Authenticates users via Supabase (JWT-based)
-- Searches across all connected data sources (Notion initially, more later)
-- Only retrieves documents the user is allowed to see (project-based permissions)
-- Uses LLMs (via Groq) to synthesize answers from relevant chunks
-- Provides citations with deep links back to source documents
+### The Problem
 
-**Who It's For:**
-- Engineering teams with internal documentation in Notion
-- Organizations that need secure, permission-aware search
-- Teams building internal AI tools with compliance requirements
+- Teams have knowledge scattered across Notion, wikis, and individuals' heads
+- When employees leave or transition projects, critical knowledge is lost
+- Existing search tools don't understand context or enforce permissions
+- Onboarding new team members takes weeks of manual knowledge transfer
+
+### Our Solution
+
+A unified platform that:
+1. **Ingests documents** from Notion (PDF/DOCX via upload)
+2. **Embeds content** using Cohere (1024-dim vectors)
+3. **Searches semantically** with pgvector + Cohere reranking
+4. **Generates answers** with LLMs and source citations
+5. **Enforces access control** (project-based + handover-based)
+6. **Manages handovers** for structured knowledge transfer between employees
 
 ---
 
 ## ✨ Features
 
-- 🔐 **Permission-Aware Search** — Users only see documents from their projects + public docs
-- 🎯 **Vector Search** — Uses pgvector with HNSW index for fast semantic search
-- 🤖 **LLM-Powered Answers** — Groq inference (Llama 3.3, Mixtral, ChatGPT-OSS ) with Cohere embeddings
-- 📚 **Source Citations** — Every answer includes links to source documents
-- 🔄 **Cohere Reranker** — Improves relevance by reranking vector search results
-- 📊 **Audit Logging** — Tracks every query for compliance and debugging
-- 🌐 **Notion Integration** — Ingests pages from Notion databases (extensible to PDFs, Drive, etc.)
-- 🎨 **Modern UI** — Built with Next.js 14, shadcn/ui, and Tailwind CSS
-- 🌙 **Dark Mode** — Built-in theme switching
+### 🔍 Core RAG Features
+- **🔐 Permission-Aware Search** — Users only see documents from their projects + handovers they're involved in
+- **🎯 Vector Search** — pgvector with HNSW index (<2s query time on 100K chunks)
+- **🤖 LLM-Powered Answers** — Groq inference with Cohere embeddings & reranking
+- **📚 Source Citations** — Every answer includes links to source documents
+- **📊 Audit Logging** — Track every query for compliance
+
+### 🤝 Employee Handover System
+- **📝 Structured Handovers** — Context, current status, next steps, resources, contacts
+- **🔒 Private ACL** — Only sender, recipient, and CC'd users can access
+- **🔍 Searchable** — Handovers appear in RAG search (embedded automatically)
+- **📈 Lifecycle Tracking** — pending → acknowledged → completed
+- **📎 Resource Links** — Attach documents and external resources
+
+### 🌐 Document Management
+- **Notion Integration** — Auto-ingest Notion databases (scheduled workers)
+- **File Upload** — Managers can upload PDFs/DOCX (chunked + embedded)
+- **Version Tracking** — Content hash prevents duplicate embeddings
+- **Project Assignment** — Documents belong to projects with visibility controls
+
+### 🎨 Modern Frontend
+- **Next.js 14** with App Router
+- **shadcn/ui** components with Tailwind CSS
+- **Dark mode** built-in
+- **Responsive design** for desktop and mobile
+- **Separate interfaces** for employees and managers
 
 ---
 
-## 🏗️ How It Works
+## 🏗️ Architecture
 
 ### High-Level Flow
 
 ```
-User Browser
-    ↓ (1) Login via Supabase Auth
-    ↓ (2) Ask question in chat interface
-    ↓
-Next.js Frontend (Port 3000)
-    ↓ (3) POST /api/search with JWT
-    ↓
-FastAPI Backend (Port 8000)
-    ↓ (4) Verify JWT → Get user's projects
-    ↓ (5) Embed query (Cohere 1024-dim)
-    ↓ (6) Search chunks (pgvector + ACL filter)
-    ↓ (7) Rerank results (Cohere rerank-v3)
-    ↓ (8) Generate answer (Groq LLM)
-    ↓ (9) Log to audit_queries
-    ↓
-    ← (10) Return answer + citations
-    ↓
-User sees answer with source links
-
-Offline (Cron/Scheduled):
-Notion API → Workers → Normalize → Chunk → Embed → Upsert to Postgres
+┌─────────────────────────────────────────────────────────────────┐
+│                        USER INTERACTION                         │
+├─────────────────────────────────────────────────────────────────┤
+│  1. User logs in (dev: mock auth | prod: Supabase Auth)        │
+│  2. User asks question: "How do I deploy Atlas?"                │
+│  3. User views received handovers from departing employees      │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                     FRONTEND (Next.js)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  • apps/web/app/chatbot/         - RAG search interface        │
+│  • apps/web/app/handovers/       - Handover management         │
+│  • apps/web/app/documents/       - Document browser            │
+│  • apps/web/app/manager/         - Manager upload interface    │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ HTTP (JWT auth)
+┌─────────────────────────────────────────────────────────────────┐
+│                     BACKEND (FastAPI)                           │
+├─────────────────────────────────────────────────────────────────┤
+│  POST /api/search                                               │
+│    1. Verify JWT → Get user_id                                 │
+│    2. Load user's projects                                      │
+│    3. Embed query (Cohere)                                      │
+│    4. Vector search (pgvector + ACL)                            │
+│       → UNION(documents user can access, handovers user is in)  │
+│    5. Rerank results (Cohere)                                   │
+│    6. Generate answer (Groq LLM)                                │
+│    7. Audit log query                                           │
+│                                                                 │
+│  POST /api/handovers                                            │
+│    1. Create handover record                                    │
+│    2. Chunk handover content                                    │
+│    3. Embed chunks (Cohere)                                     │
+│    4. Insert chunks with handover_id                            │
+│                                                                 │
+│  GET /api/handovers                                             │
+│    → Returns handovers user sent/received                       │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓ SQL queries
+┌─────────────────────────────────────────────────────────────────┐
+│              DATABASE (Postgres + pgvector)                     │
+├─────────────────────────────────────────────────────────────────┤
+│  • employees              - Users (synced with Supabase Auth)   │
+│  • projects               - Access boundaries                   │
+│  • employee_projects      - Who belongs to which projects       │
+│  • documents              - Document metadata                   │
+│  • handovers              - Knowledge handover records          │
+│  • chunks                 - Searchable text + 1024-dim vectors  │
+│    ├─ doc_id (nullable)   - Chunks from documents              │
+│    └─ handover_id (null)  - Chunks from handovers              │
+│  • audit_queries          - Query logs for compliance           │
+└─────────────────────────────────────────────────────────────────┘
+                              ↑
+                              │ (scheduled ingestion)
+┌─────────────────────────────────────────────────────────────────┐
+│                   WORKERS (Notion Ingestion)                    │
+├─────────────────────────────────────────────────────────────────┤
+│  python workers/ingest_notion.py --notion-db-id <id>            │
+│    1. Fetch pages from Notion API                               │
+│    2. Convert blocks → Markdown                                 │
+│    3. Chunk text (300-700 tokens, 50-token overlap)             │
+│    4. Embed chunks (Cohere)                                     │
+│    5. Upsert documents + chunks to database                     │
+│    (Runs every 6 hours via cron/Lambda/Cloud Scheduler)         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Access Control Logic
 
-**Rule:** User can see document IF:
+**Documents:**
 ```
-document.visibility = 'Public' 
-OR 
-document.project_id IN user.projects
+User can see document IF:
+  • document.visibility = 'Public', OR
+  • document.project_id IN user.projects
 ```
 
-**Example:**
-- **User:** Sarah (`employee_id: 550e8400-...`)
-- **Sarah's Projects:** `['Atlas', 'Phoenix']` (from `employee_projects` table)
-- **Documents:**
-  - **Atlas Deploy Guide** → `visibility=Private, project_id=Atlas` → ✅ Sarah CAN see
-  - **Company Handbook** → `visibility=Public` → ✅ Sarah CAN see
-  - **Bolt API Docs** → `visibility=Private, project_id=Bolt` → ❌ Sarah CANNOT see
+**Handovers:**
+```
+User can see handover IF:
+  • user = handover.from_employee_id (sender), OR
+  • user = handover.to_employee_id (recipient), OR
+  • user IN handover.cc_employee_ids (CC'd)
+```
 
-ACL is enforced at the database level via SQL `WHERE` clause, not in application code.
-
-### Database Schema
-
-5 tables power the entire system:
-
-1. **`employees`** — Users (synced with Supabase Auth)
-2. **`projects`** — Access boundaries (e.g., 'Atlas', 'Bolt')
-3. **`employee_projects`** — Who belongs to which projects
-4. **`documents`** — Metadata for each Notion page/file
-5. **`chunks`** — Searchable text pieces with 1024-dim embeddings
-6. **`audit_queries`** — Query logs for compliance
-
-**For detailed schema with examples and SQL queries, see [`supabase/README.md`](./supabase/README.md).**
+**Search Results:**
+- UNION of documents + handovers user has access to
+- Ordered by vector similarity score
+- Reranked by Cohere for relevance
 
 ---
 
@@ -114,87 +177,548 @@ ACL is enforced at the database level via SQL `WHERE` clause, not in application
 - **API Keys:**
   - Cohere API key ([cohere.com](https://cohere.com))
   - Groq API key ([console.groq.com](https://console.groq.com))
-  - Notion Integration token ([notion.so/my-integrations](https://www.notion.so/my-integrations))
+  - Notion API key ([notion.so/my-integrations](https://www.notion.so/my-integrations)) — optional
 
 ### Installation (30 minutes)
 
-```bash
-# 1. Clone repository
-git clone <your-repo-url>
-cd rag-knowledge-hub
+#### 1. Clone Repository
 
-# 2. Install frontend dependencies
+```bash
+git clone <your-repo-url>
+cd capstone-project-rag-based-knowledge-hub
+```
+
+#### 2. Database Setup (Supabase)
+
+**a. Create Supabase Project**
+1. Go to [supabase.com](https://supabase.com)
+2. Create new project
+3. Wait for initialization (~2 minutes)
+
+**b. Run Migrations**
+
+Go to **Supabase Dashboard** → **SQL Editor** and run these in order:
+
+```sql
+-- Migration 1: Base schema (employees, projects, documents, chunks)
+-- Copy entire content from: supabase/migrations/20251002234351_updated_db.sql
+```
+
+```sql
+-- Migration 2: Handovers feature
+-- Copy entire content from: supabase/migrations/20251007000000_add_handovers.sql
+```
+
+```sql
+-- Migration 3: Fix source_external_id
+-- Copy entire content from: supabase/migrations/20251007_fix_source_external_id.sql
+```
+
+**c. Seed Test Data**
+
+```sql
+-- Copy entire content from: supabase/seed.sql
+-- This creates test employees, projects, and assignments
+```
+
+#### 3. Environment Variables
+
+Create `.env` in project root:
+
+```env
+# ============================================================================
+# Database (from Supabase Dashboard → Settings → Database → Connection String)
+# ============================================================================
+DATABASE_URL=postgresql://postgres.[PROJECT]:PASSWORD@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+
+# ============================================================================
+# Backend (apps/backend/.env)
+# ============================================================================
+SUPABASE_JWT_SECRET=your-jwt-secret-from-supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+COHERE_API_KEY=your-cohere-api-key
+GROQ_API_KEY=gsk_your-groq-key
+CORS_ORIGINS=http://localhost:3000
+
+# Testing (dev only)
+TEST_USER_ID=550e8400-e29b-41d4-a716-446655440000
+TEST_JWT_TOKEN=<generate using apps/backend/generate_test_jwt.py>
+
+# ============================================================================
+# Frontend (apps/web/.env.local)
+# ============================================================================
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# ============================================================================
+# Workers (optional, for Notion ingestion)
+# ============================================================================
+NOTION_API_KEY=secret_your-notion-integration-token
+```
+
+**How to get these values:**
+- `SUPABASE_URL` + `SUPABASE_ANON_KEY`: Dashboard → Settings → API
+- `SUPABASE_JWT_SECRET`: Dashboard → Settings → API → JWT Secret
+- `DATABASE_URL`: Dashboard → Settings → Database → Connection String (use "Connection pooling")
+- `COHERE_API_KEY`: Sign up at [cohere.com](https://cohere.com) → Dashboard → API Keys
+- `GROQ_API_KEY`: Sign up at [console.groq.com](https://console.groq.com) → API Keys
+- `NOTION_API_KEY`: [notion.so/my-integrations](https://www.notion.so/my-integrations) → Create integration
+
+#### 4. Install Dependencies
+
+```bash
+# Frontend
 cd apps/web
 npm install
 
-# 3. Install backend dependencies
+# Backend
 cd ../backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# 4. Install worker dependencies
+# Workers (optional, for Notion ingestion)
 cd ../../workers
 pip install -r requirements.txt
-
-# 5. Set up environment variables
-cd ../..
-cp .env.example .env
-# Edit .env with your API keys (see Environment Variables section)
-
-# 6. Run database migrations
-cd supabase
-npx supabase link --project-ref <your-supabase-project-ref>
-npx supabase db push
-
-# 7. Seed test data
-# In Supabase SQL Editor (https://supabase.com/dashboard/project/_/sql):
-INSERT INTO employees (employee_id, email, display_name) 
-VALUES ('<your-supabase-auth-uid>', 'you@example.com', 'Your Name');
-
-INSERT INTO projects (project_id, name) 
-VALUES ('Atlas', 'Atlas Platform');
-
-INSERT INTO employee_projects (employee_id, project_id, role) 
-VALUES ('<your-supabase-auth-uid>', 'Atlas', 'owner');
-
-# 8. Ingest Notion pages (run once to seed data)
-cd workers
-python ingest_notion.py --notion-db-id <your-notion-database-id>
-# This will embed 5-10 pages. Takes ~5 minutes depending on content size.
 ```
 
-### Running Locally
+#### 5. Generate Test JWT Tokens
 
 ```bash
-# Terminal 1 - Frontend
-cd apps/web
-npm run dev
-# → http://localhost:3000
+cd apps/backend
+python generate_test_jwt.py employee  # Regular employee token
+python generate_test_jwt.py manager   # Manager token
 
-# Terminal 2 - Backend
+# Add these to apps/backend/.env:
+# TEST_JWT_TOKEN=<token-from-above>
+```
+
+#### 6. Run Services Locally
+
+**Terminal 1 - Backend:**
+```bash
 cd apps/backend
 source venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # → http://localhost:8000
 # → API docs: http://localhost:8000/docs
-
-# Terminal 3 - Worker (optional, for re-ingesting)
-cd workers
-source venv/bin/activate
-python ingest_notion.py --notion-db-id <id>
 ```
 
-### First Test
+**Terminal 2 - Frontend:**
+```bash
+cd apps/web
+npm run dev
+# → http://localhost:3000
+```
 
-1. Open http://localhost:3000
-2. Sign up / Log in with email + password
-3. Navigate to "AI Search" tab
-4. Type: **"What is Atlas?"** or **"How do I deploy?"**
-5. You should see:
-   - An answer generated by the LLM
-   - 3-5 source citations with links to Notion pages
-   - Clicking a citation opens the Notion page
+**Terminal 3 - Worker (optional, for Notion ingestion):**
+```bash
+cd workers
+source venv/bin/activate
+python ingest_notion.py --notion-db-id <your-notion-database-id>
+```
+
+#### 7. Test the Application
+
+1. **Open** http://localhost:3000
+2. **Login** with test credentials:
+   - Employee: `employee@company.com` / `dev`
+   - Manager: `manager@company.com` / `dev`
+3. **Navigate** to Chatbot section
+4. **Ask a question**: "What is Atlas?" or "How do I deploy?"
+5. **See results** with AI-generated answer + source citations
+
+---
+
+## 📂 Repository Structure
+
+```
+capstone-project-rag-based-knowledge-hub/
+├── README.md                         ← You are here
+├── .env.example                      ← Environment variable template
+├── docker-compose.yml                ← Docker deployment (backend + frontend)
+├── AWS_AMPLIFY_APPRUNNER_GUIDE.md    ← Full AWS deployment guide
+├── DEMO_DEPLOYMENT.md                ← Quick demo deployment guide
+├── HANDOVERS_TESTING_GUIDE.md        ← How to test handovers feature
+│
+├── supabase/                         ← Database schema and migrations
+│   ├── migrations/
+│   │   ├── 20251002234351_updated_db.sql          ← Base schema
+│   │   ├── 20251007000000_add_handovers.sql       ← Handovers feature
+│   │   └── 20251007_fix_source_external_id.sql    ← Notion ID fix
+│   └── seed.sql                      ← Test data (employees, projects)
+│
+├── apps/
+│   ├── web/                          ← Next.js 14 Frontend
+│   │   ├── app/
+│   │   │   ├── page.tsx              ← Landing page
+│   │   │   ├── login/page.tsx        ← Login page (dev: mock auth)
+│   │   │   ├── home/                 ← Employee dashboard
+│   │   │   ├── chatbot/              ← RAG search interface
+│   │   │   ├── handovers/            ← Handover management
+│   │   │   ├── documents/            ← Document browser
+│   │   │   └── manager/              ← Manager interface (upload docs)
+│   │   │
+│   │   ├── components/
+│   │   │   ├── ui/                   ← shadcn/ui primitives
+│   │   │   ├── login-form.tsx        ← Mock login (dev only)
+│   │   │   ├── manager-dashboard.tsx ← Manager dashboard
+│   │   │   └── [other components]    ← Feature-specific components
+│   │   │
+│   │   ├── hooks/                    ← Custom React hooks
+│   │   ├── types/                    ← TypeScript type definitions
+│   │   ├── Dockerfile                ← Frontend Docker image
+│   │   └── next.config.mjs           ← Next.js config (standalone mode)
+│   │
+│   └── backend/                      ← FastAPI Backend
+│       ├── app/
+│       │   ├── main.py               ← FastAPI app entry point
+│       │   │
+│       │   ├── api/routes/
+│       │   │   ├── search.py         ← POST /api/search (RAG endpoint)
+│       │   │   ├── docs.py           ← GET /api/docs/:id (document metadata)
+│       │   │   ├── upload.py         ← POST /api/upload (file upload)
+│       │   │   ├── handovers.py      ← Handover CRUD endpoints
+│       │   │   ├── employees.py      ← Employee endpoints
+│       │   │   └── notion.py         ← Notion webhook endpoint
+│       │   │
+│       │   ├── services/
+│       │   │   ├── auth.py           ← JWT verification, get user projects
+│       │   │   ├── embeddings.py     ← Cohere embeddings (1024-dim)
+│       │   │   ├── retrieval.py      ← Vector search + Cohere reranking
+│       │   │   ├── llm.py            ← Groq LLM inference
+│       │   │   ├── audit.py          ← Audit logging
+│       │   │   ├── db.py             ← Database helper functions
+│       │   │   └── storage.py        ← File storage (uploads)
+│       │   │
+│       │   ├── db/
+│       │   │   └── client.py         ← asyncpg connection pool
+│       │   │
+│       │   └── models/
+│       │       └── schemas.py        ← Pydantic request/response models
+│       │
+│       ├── tests/
+│       │   ├── test_handovers_api.py ← Handover API tests (13 tests)
+│       │   ├── test_handovers_db.py  ← Handover DB tests (12 tests)
+│       │   └── seed_test_data.sql    ← Test fixtures
+│       │
+│       ├── generate_test_jwt.py      ← Generate JWT tokens for testing
+│       ├── Dockerfile                ← Backend Docker image
+│       └── requirements.txt          ← Python dependencies
+│
+└── workers/                          ← Notion Ingestion Pipeline
+    ├── ingest_notion.py              ← Main ingestion script
+    ├── debug_notion.py               ← Debugging tool
+    │
+    ├── lib/
+    │   ├── notion_client.py          ← Notion API wrapper
+    │   ├── normalizer.py             ← Convert Notion blocks → Markdown
+    │   ├── chunker.py                ← Split text into chunks
+    │   ├── embeddings.py             ← Embed chunks with Cohere
+    │   └── db_operations.py          ← Upsert to database
+    │
+    └── requirements.txt              ← Worker dependencies
+```
+
+---
+
+## 🧩 Feature Deep Dives
+
+### 1. Employee Handovers
+
+**What is a Handover?**
+
+A structured knowledge transfer from one employee to another, typically during:
+- Onboarding new team members
+- Project transitions
+- Employee offboarding
+- Temporary coverage (vacation, leave)
+
+**Handover Structure:**
+
+```typescript
+{
+  title: "Atlas API Handover",
+  from_employee_id: "uuid-of-sender",
+  to_employee_id: "uuid-of-recipient",
+  cc_employee_ids: ["uuid-of-manager"],  // Optional CC
+  project_id: "atlas-api",                // Optional project link
+
+  // Content sections (all optional)
+  context: "Why this handover exists...",
+  current_status: "What's been done so far...",
+  next_steps: [
+    { task: "Review deployment checklist", done: false },
+    { task: "Set up local dev environment", done: true }
+  ],
+  resources: [
+    { type: "doc", doc_id: 123, title: "Atlas Deploy Guide" },
+    { type: "link", url: "https://github.com/atlas", title: "Atlas Repo" }
+  ],
+  contacts: [
+    { name: "John Doe", email: "john@company.com", role: "Tech Lead" }
+  ],
+  additional_notes: "Free-form notes...",
+
+  // Lifecycle
+  status: "pending" | "acknowledged" | "completed",
+  created_at: "2025-01-15T10:00:00Z",
+  acknowledged_at: null,  // Set when recipient acknowledges
+  completed_at: null       // Set when work is done
+}
+```
+
+**How Handovers are Embedded and Searched:**
+
+1. **Creation:**
+   ```
+   User creates handover via POST /api/handovers
+     ↓
+   Backend:
+     1. Inserts handover record into database
+     2. Constructs searchable text from all fields:
+        "Title: Atlas API Handover
+         Context: Project transition...
+         Current Status: API deployed...
+         Next Steps: Review deployment checklist..."
+     3. Chunks the text (300-700 tokens)
+     4. Embeds each chunk with Cohere
+     5. Inserts chunks with handover_id (doc_id=NULL)
+   ```
+
+2. **Searching:**
+   ```
+   User searches "How do I deploy Atlas?"
+     ↓
+   Backend:
+     1. Embeds query with Cohere
+     2. Runs vector search:
+        SELECT ... FROM chunks
+        UNION (
+          -- Documents user can access
+          WHERE doc_id IS NOT NULL AND (public OR in user's projects)
+        )
+        UNION (
+          -- Handovers user is involved in
+          WHERE handover_id IS NOT NULL
+            AND (user=sender OR user=recipient OR user IN cc_list)
+        )
+     3. Reranks results with Cohere
+     4. Generates answer with Groq LLM
+     5. Returns answer + citations (includes handover links)
+   ```
+
+3. **Access Control:**
+   - Handovers are **PRIVATE** by default
+   - Only sender, recipient, and CC'd users can:
+     - View the handover details
+     - See handover chunks in search results
+   - Prevents unauthorized access to sensitive knowledge
+
+**API Endpoints:**
+
+- `POST /api/handovers` — Create handover
+- `GET /api/handovers` — List user's handovers (sent + received)
+- `GET /api/handovers/:id` — Get specific handover
+- `PATCH /api/handovers/:id` — Update status (acknowledge/complete)
+- `DELETE /api/handovers/:id` — Delete handover (sender only)
+
+**Lifecycle:**
+
+```
+Created (status=pending)
+  ↓
+Recipient acknowledges (status=acknowledged, acknowledged_at set)
+  ↓
+Work completed (status=completed, completed_at set)
+```
+
+---
+
+### 2. Notion Ingestion
+
+**What It Does:**
+
+Automatically syncs Notion pages into your RAG system, making them searchable via vector embeddings.
+
+**How It Works:**
+
+```
+1. Fetch Pages from Notion Database
+   ↓
+   notion_client.list_notion_pages(database_id)
+   → Returns list of pages with metadata
+
+2. For Each Page:
+   a. Fetch Blocks (content)
+      notion_client.fetch_blocks(page_id)
+      → Returns paragraphs, headings, lists, code blocks, etc.
+
+   b. Convert to Markdown
+      normalizer.normalize_to_markdown(blocks)
+      → Preserves structure: headings, lists, tables
+      → Extracts heading_path: ["Runbook", "Incidents", "Step 1"]
+
+   c. Compute Content Hash
+      hashlib.md5(markdown)
+      → If hash unchanged from last run → skip re-embedding
+
+   d. Detect Metadata
+      - Project: page.properties["Project"]["select"]["name"] → "Atlas"
+      - Visibility: page.properties["Visibility"]["status"]["name"] → "Public"/"Private"
+
+   e. Upsert Document
+      db_operations.upsert_document(...)
+      → INSERT ... ON CONFLICT (source_external_id) DO UPDATE
+      → Returns doc_id
+
+   f. Chunk the Markdown
+      chunker.chunk_markdown(markdown)
+      → Splits into 300-700 token pieces with 50-token overlap
+      → Preserves context between chunks
+
+   g. Embed Each Chunk
+      embeddings.embed_text(chunk.text)
+      → Calls Cohere API
+      → Returns 1024-dimensional vector
+
+   h. Insert Chunks
+      db_operations.insert_chunk(doc_id, chunk, embedding)
+      → Inserts into chunks table with doc_id
+
+3. Database Now Contains:
+   - 1 row in documents (title, project, visibility, URI, hash)
+   - N rows in chunks (text, embedding, heading_path, doc_id)
+```
+
+**Why Chunking?**
+
+- LLMs have token limits (8K-32K tokens)
+- Long documents (50+ pages) exceed these limits
+- Chunks = bite-sized pieces (300-700 tokens each)
+- Overlap ensures context isn't lost between chunks
+
+**Why Content Hash?**
+
+- Avoid re-embedding unchanged content (saves API costs)
+- Worker checks hash before embedding
+- Only re-embeds if content changed
+
+**Scheduling:**
+
+Run ingestion periodically to sync new/updated Notion pages:
+
+```bash
+# Manual run
+python workers/ingest_notion.py --notion-db-id <id>
+
+# Cron (every 6 hours)
+0 */6 * * * cd /path/to/workers && python ingest_notion.py --notion-db-id <id>
+
+# AWS Lambda (scheduled with EventBridge)
+# Google Cloud Run Job (scheduled with Cloud Scheduler)
+```
+
+**Notion Setup:**
+
+1. Create Notion integration: [notion.so/my-integrations](https://www.notion.so/my-integrations)
+2. Get integration token (starts with `secret_`)
+3. Share your Notion database with the integration:
+   - Open database → Click `•••` → "Connections" → Add your integration
+4. Get database ID from URL:
+   - URL: `https://notion.so/workspace/<DATABASE_ID>?v=...`
+5. Add to `.env`:
+   ```
+   NOTION_API_KEY=secret_your-token
+   ```
+
+---
+
+### 3. RAG Search Flow (End-to-End)
+
+```
+[1] User asks: "How do I deploy Atlas?"
+      ↓
+[2] Frontend: POST /api/search
+      Headers: Authorization: Bearer <JWT>
+      Body: { query: "How do I deploy Atlas?", top_k: 12 }
+      ↓
+[3] Backend (apps/backend/app/api/routes/search.py):
+      ↓
+    [3a] Verify JWT → Extract user_id
+         auth.verify_jwt(token) → "550e8400-e29b-41d4-a716-446655440000"
+      ↓
+    [3b] Load user's projects
+         auth.get_user_projects(user_id) → ["atlas-api", "demo-project"]
+      ↓
+    [3c] Embed query
+         embeddings.embed_query("How do I deploy Atlas?")
+         → Returns 1024-dim vector: [0.023, -0.15, 0.091, ...]
+      ↓
+    [3d] Vector search (retrieval.run_vector_search)
+         SQL:
+         SELECT ... FROM chunks
+         UNION (
+           -- Documents
+           WHERE doc_id IS NOT NULL
+             AND (visibility='Public' OR project_id IN ('atlas-api','demo-project'))
+         )
+         UNION (
+           -- Handovers
+           WHERE handover_id IS NOT NULL
+             AND (from_employee_id='<user>' OR to_employee_id='<user>' OR user IN cc_list)
+         )
+         ORDER BY embedding <=> query_vector  -- pgvector cosine similarity
+         LIMIT 200
+
+         → Returns 200 candidate chunks
+      ↓
+    [3e] Rerank (retrieval.rerank)
+         Cohere rerank-v3 reranks 200 → top 12 most relevant
+         → Returns 12 best chunks
+      ↓
+    [3f] Generate answer (llm.call_llm)
+         Prompt to Groq (Llama 3.3 or Mixtral):
+         """
+         Based on these documents, answer: How do I deploy Atlas?
+
+         [Chunk 1: Atlas Deploy Guide - "To deploy Atlas API, first..."]
+         [Chunk 2: Atlas Runbook - "Deployment checklist: 1. Check env vars..."]
+         [Chunk 3: Atlas Handover - "Deployment steps: make deploy, verify health..."]
+         """
+
+         → LLM generates: "To deploy Atlas API, follow these steps: ..."
+      ↓
+    [3g] Audit log (audit.audit_log)
+         Inserts into audit_queries table:
+         (user_id, query, used_doc_ids, used_handover_ids, timestamp)
+      ↓
+    [3h] Return response
+         {
+           "answer": "To deploy Atlas API, follow these steps: ...",
+           "chunks": [
+             { "doc_id": 123, "title": "Atlas Deploy Guide", "text": "...", "score": 0.87 },
+             { "handover_id": 5, "title": "Atlas Handover", "text": "...", "score": 0.82 }
+           ],
+           "used_doc_ids": [123, 124],
+           "used_handover_ids": [5]
+         }
+      ↓
+[4] Frontend displays:
+    - AI-generated answer in chat bubble
+    - Source citations with links:
+      → "Atlas Deploy Guide" (links to Notion)
+      → "Atlas Handover" (links to /handovers/5)
+    - User clicks citation → Opens source
+```
+
+**Key Points:**
+- **ACL enforced at SQL level** (not in application code)
+- **UNION** combines document chunks + handover chunks
+- **Reranking** improves relevance (Cohere is good at this)
+- **Audit logs** track all queries for compliance
 
 ---
 
@@ -204,824 +728,229 @@ python ingest_notion.py --notion-db-id <id>
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | `https://abcdefgh.supabase.co` |
+| `NEXT_PUBLIC_API_URL` | Backend API endpoint | `http://localhost:8000` (dev)<br>`https://your-api.awsapprunner.com` (prod) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `https://abcdefgh.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
-| `NEXT_PUBLIC_API_URL` | Backend API endpoint | `http://localhost:8000` (local) or `https://api.yourapp.com` (prod) |
-
-**Get Supabase credentials:** Dashboard → Settings → API
 
 ### Backend (`apps/backend/.env`)
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | Postgres connection string with pgvector | `postgresql://user:pass@host:5432/db` |
+| `DATABASE_URL` | PostgreSQL connection string (from Supabase) | `postgresql://postgres.abc:pass@aws-0-us-east-1.pooler.supabase.com:5432/postgres` |
 | `SUPABASE_JWT_SECRET` | For verifying JWT tokens | Get from Supabase Dashboard → Settings → API → JWT Secret |
+| `SUPABASE_URL` | Supabase project URL | `https://abcdefgh.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (for admin operations) | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
 | `COHERE_API_KEY` | Cohere API key for embeddings + reranking | `xxx-yyy-zzz` |
 | `GROQ_API_KEY` | Groq API key for LLM inference | `gsk_xxxxxxxxxxxxx` |
 | `CORS_ORIGINS` | Allowed frontend origins (comma-separated) | `http://localhost:3000,https://yourapp.com` |
+| `TEST_USER_ID` | Test user UUID (dev only) | `550e8400-e29b-41d4-a716-446655440000` |
+| `TEST_JWT_TOKEN` | Test JWT token (dev only) | Generate with `generate_test_jwt.py` |
 
 ### Workers (`workers/.env`)
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | Same Postgres connection string | (same as backend) |
+| `DATABASE_URL` | Same PostgreSQL connection string | (same as backend) |
 | `NOTION_API_KEY` | Notion integration token | `secret_xxxxxxxxxxxxx` |
 | `COHERE_API_KEY` | Same Cohere key | (same as backend) |
 
 ---
 
-## 📂 Repository Structure
-
-```
-rag-knowledge-hub/
-├── .env.example                      # Template for environment variables
-├── .gitignore                        # Git ignore rules
-├── docker-compose.yml                # Local dev: backend + postgres (optional)
-├── README.md                         # This file
-├── ARCHITECTURE.md                   # Lean architecture (essentials)
-├── TESTING_GUIDE.md                  # How to test individual functions
-│
-├── supabase/                         # Database schema and migrations
-│   ├── migrations/
-│   │   └── 20251002234351_updated_db.sql # Creates 5 core tables + indexes
-│   └── README.md                     # Complete database documentation
-│
-├── apps/                             # Frontend and backend applications
-│   │
-│   ├── web/                          # Next.js 14 frontend (TypeScript + React)
-│   │   ├── app/
-│   │   │   ├── layout.tsx            # Root layout with auth provider
-│   │   │   ├── page.tsx              # Main app interface (tabs: Search/Docs/Projects)
-│   │   │   ├── globals.css           # Global Tailwind styles
-│   │   │   ├── login/
-│   │   │   │   └── page.tsx          # Login page with Supabase Auth
-│   │   │   └── signup/
-│   │   │       └── page.tsx          # Signup page
-│   │   │
-│   │   ├── components/
-│   │   │   ├── ui/                   # shadcn/ui primitives (button, input, card, etc.)
-│   │   │   ├── ChatInput.tsx         # Text input + send button for queries
-│   │   │   ├── MessageList.tsx       # Display Q&A conversation
-│   │   │   ├── SourcesList.tsx       # Show document citations
-│   │   │   ├── Navbar.tsx            # Navigation bar
-│   │   │   ├── theme-provider.tsx    # Dark mode provider
-│   │   │   ├── home-dashboard.tsx    # Home/Dashboard view
-│   │   │   ├── manager-interface.tsx # Manager file upload interface
-│   │   │   ├── meetings-tab.tsx      # Meetings view
-│   │   │   ├── documents-tab.tsx     # Browse all searchable documents
-│   │   │   └── projects-tab.tsx      # View user's project memberships
-│   │   │
-│   │   ├── lib/
-│   │   │   ├── utils.ts              # Utility functions (cn, etc.)
-│   │   │   ├── supabase.ts           # Supabase client for auth
-│   │   │   └── api.ts                # Backend API calls (searchKnowledge, etc.)
-│   │   │
-│   │   ├── types/
-│   │   │   └── index.ts              # TypeScript types (SearchResponse, Chunk, etc.)
-│   │   │
-│   │   ├── __tests__/                # Frontend unit tests (see README in this folder)
-│   │   │   ├── components/           # Component tests (Jest + React Testing Library)
-│   │   │   ├── lib/                  # API/utility tests
-│   │   │   └── README.md             # How to run frontend tests
-│   │   │
-│   │   ├── public/                   # Static assets (logos, placeholders)
-│   │   │
-│   │   ├── package.json              # Dependencies and scripts
-│   │   ├── tsconfig.json             # TypeScript config
-│   │   ├── next.config.mjs           # Next.js config
-│   │   ├── jest.config.js            # Jest configuration for tests
-│   │   ├── jest.setup.js             # Test setup file
-│   │   ├── .env.local                # Local environment variables (gitignored)
-│   │   ├── postcss.config.mjs        # PostCSS config
-│   │   └── components.json           # shadcn/ui config
-│   │
-│   └── backend/                      # FastAPI backend (Python)
-│       ├── app/
-│       │   ├── main.py               # FastAPI app entry (CORS, routers, startup)
-│       │   │
-│       │   ├── core/
-│       │   │   ├── __init__.py       # Core package init
-│       │   │   └── constants.py      # Shared constants (embedding model, dimensions, etc.)
-│       │   │
-│       │   ├── api/
-│       │   │   └── routes/
-│       │   │       ├── search.py     # POST /api/search — Main RAG endpoint
-│       │   │       └── docs.py       # GET /api/docs/:doc_id — Document metadata
-│       │   │
-│       │   ├── services/
-│       │   │   ├── auth.py           # JWT verification, get user projects
-│       │   │   ├── embeddings.py     # Cohere embed-english-v3 (1024-dim)
-│       │   │   ├── retrieval.py      # pgvector search + ACL + Cohere reranking
-│       │   │   ├── llm.py            # Groq LLM inference (Llama 3.3, Mixtral, ChatGPT-OSS)
-│       │   │   └── audit.py          # Audit logging to database
-│       │   │
-│       │   ├── db/
-│       │   │   └── client.py         # asyncpg connection pool
-│       │   │
-│       │   └── models/
-│       │       └── schemas.py        # Pydantic request/response models
-│       │
-│       ├── tests/                    # Unit tests for backend services (see TESTING_GUIDE.md)
-│       │
-│       ├── requirements.txt          # Python dependencies
-│       ├── Dockerfile                # Container for deployment
-│       └── .dockerignore             # Exclude files from Docker image
-│
-└── workers/                          # Offline ingestion (not a web server)
-    ├── ingest_notion.py              # Main script: syncs Notion → Database
-    ├── requirements.txt              # Worker dependencies
-    │
-    ├── lib/
-    │   ├── __init__.py               # Workers package init
-    │   ├── constants.py              # Shared constants (embedding model, chunk size, etc.)
-    │   ├── notion_client.py          # Notion API wrapper
-    │   ├── normalizer.py             # Convert Notion blocks → Markdown
-    │   ├── chunker.py                # Split text into 300-700 token chunks
-    │   ├── embeddings.py             # Embed chunks with Cohere
-    │   └── db_operations.py          # Upsert documents and chunks to DB
-    │
-    └── tests/                        # Unit tests for worker functions (see TESTING_GUIDE.md)
-```
-
----
-
-## 📚 Understanding the Repository Structure
-
-This section explains what each major folder does and why it exists. Read this to understand how the pieces fit together.
-
-### 🗄️ `supabase/` — Database Schema & Migrations
-
-**What it is:** This folder contains all database-related code — table definitions, indexes, and schema changes.
-
-**What it does:**
-- Defines the 5 core tables (`employees`, `projects`, `employee_projects`, `documents`, `chunks`, `audit_queries`)
-- Creates indexes for fast searches (especially the HNSW index for vector search)
-- Manages schema changes over time (migrations)
-
-**Why we need it:**
-- Database is the **single source of truth** for all data
-- Stores document metadata, user permissions, and vector embeddings
-- Migrations ensure everyone's database has the same structure
-
-**Key files:**
-- `migrations/20251002234351_updated_db.sql` — Creates all tables and indexes (run this first!)
-- `README.md` — Complete guide to the database with examples and troubleshooting
-
-**When you use it:**
-- **Setup:** Run migrations once when setting up the project (`npx supabase db push`)
-- **Development:** Add new migration files when you need to change the schema
-- **Reference:** Check README.md when writing queries or debugging access control
-
----
-
-### 📦 `apps/` — All Application Code
-
-**What it is:** This folder contains both the **frontend** (user interface) and **backend** (API server).
-
-**Why it's called "apps":**
-- Modern projects often have multiple apps (web, mobile, admin panel, etc.)
-- Keeps related applications organized in one place
-- In our case, we have 2 apps: `web` (frontend) and `backend` (API)
-
-**Think of it like this:**
-```
-apps/
-├── web/       ← What users see and interact with (browser)
-└── backend/   ← What powers the search and handles data (server)
-```
-
----
-
-### 🌐 `apps/web/` — Frontend (User Interface)
-
-**What it is:** The website users interact with. Built with **Next.js 14** (a React framework).
-
-**What it does:**
-1. **Shows the chat interface** where users type questions
-2. **Displays answers** from the AI with source citations
-3. **Handles login/signup** via Supabase Auth
-4. **Calls the backend API** to search for documents
-
-**How it works:**
-```
-User types question
-  → Frontend sends to backend API
-  → Backend returns answer + sources
-  → Frontend displays results
-```
-
-**Main folders inside `apps/web/`:**
-
-#### `app/` — Page Definitions (Next.js App Router)
-- `layout.tsx` — Root layout (wraps entire app with font, theme, auth provider)
-- `page.tsx` — Main app interface (chat, search, navigation tabs)
-- `login/page.tsx` — Login page
-- `signup/page.tsx` — Signup page
-- `globals.css` — Global styles (colors, fonts, Tailwind base)
-
-**Think of `app/` as the "pages" of your website.**
-
-#### `components/` — Reusable UI Pieces
-- **Core components:**
-  - `ChatInput.tsx` — Text box + Send button for asking questions
-  - `MessageList.tsx` — Shows conversation history (user questions + AI answers)
-  - `SourcesList.tsx` — Displays document citations with links
-  - `Navbar.tsx` — Top navigation bar
-  - `theme-provider.tsx` — Dark mode / light mode switching
-
-- **UI primitives (`ui/` folder):**
-  - Pre-built components from shadcn/ui library
-  - Examples: `button.tsx`, `input.tsx`, `card.tsx`, `table.tsx`
-  - Used throughout the app for consistent design
-
-**Think of `components/` as Lego blocks you can reuse everywhere.**
-
-#### `lib/` — Helper Functions & API Clients
-- `utils.ts` — Utility functions (e.g., `cn()` for combining CSS classes)
-- `supabase.ts` — Supabase client (handles login, signup, JWT tokens)
-- `api.ts` — Functions to call backend API (`searchKnowledge()`, `getDocMetadata()`)
-
-**Think of `lib/` as your toolbox of helper functions.**
-
-#### `types/` — TypeScript Type Definitions
-- `index.ts` — Defines data shapes (e.g., what a `SearchResponse` looks like)
-
-**Example:**
-```typescript
-type SearchResponse = {
-  answer: string
-  chunks: Chunk[]
-  used_doc_ids: number[]
-}
-```
-
-**Why we need types:** TypeScript catches errors before code runs (e.g., typos in field names).
-
-#### `public/` — Static Files
-- Images, logos, icons that don't change
-- Accessed directly via URL (e.g., `/logo.png`)
-
-#### Configuration Files
-- `package.json` — Lists all npm packages (React, Next.js, Tailwind, etc.)
-- `tsconfig.json` — TypeScript compiler settings
-- `next.config.mjs` — Next.js configuration
-- `.env.local` — Environment variables (API URLs, Supabase keys) — **NEVER commit this!**
-
----
-
-### ⚙️ `apps/backend/` — Backend (API Server)
-
-**What it is:** The API server that powers search, authentication, and data retrieval. Built with **FastAPI** (Python framework).
-
-**What it does:**
-1. **Verifies user identity** (checks JWT tokens from Supabase)
-2. **Enforces access control** (ensures users only see documents they're allowed to)
-3. **Searches the database** using vector similarity (pgvector)
-4. **Calls AI services** (Cohere for embeddings/reranking, Groq for LLM)
-5. **Returns answers with citations** to the frontend
-6. **Logs all queries** to `audit_queries` table
-
-**How it works:**
-```
-Frontend sends: "How do I deploy Atlas?"
-  ↓
-Backend:
-  1. Verify JWT → Get user's projects
-  2. Embed query → Search database (with ACL filter)
-  3. Rerank results → Call LLM
-  4. Return answer + citations
-```
-
-**Main folders inside `apps/backend/`:**
-
-#### `app/main.py` — Application Entry Point
-- Creates the FastAPI app
-- Sets up CORS (allows frontend to call backend)
-- Registers API routes (`/api/search`, `/api/docs/:id`)
-- Initializes database connection pool on startup
-
-**Think of this as the "main" function that starts the server.**
-
-#### `app/api/routes/` — API Endpoints
-- `search.py` — `POST /api/search` (main RAG search endpoint)
-- `docs.py` — `GET /api/docs/:doc_id` (get document metadata)
-
-**These are the URLs the frontend calls.**
-
-#### `app/services/` — Business Logic (Core Functions)
-This is where the **real work** happens. Each service has a specific job:
-
-- **`auth.py`** — Authentication & Authorization
-  - `verify_jwt(token)` → Validates Supabase JWT, returns `user_id`
-  - `get_user_projects(user_id)` → Queries database for user's projects
-
-- **`embeddings.py`** — Convert Text to Vectors
-  - `embed_query(text)` → Calls Cohere API, returns 1024-dim vector
-  - Example: `"How do I deploy?"` → `[0.12, -0.08, 0.34, ...]`
-
-- **`retrieval.py`** — Search & Rerank
-  - `run_vector_search(qvec, projects, top_k=200)` → Queries pgvector with ACL filter
-  - `rerank(chunks, query)` → Calls Cohere reranker, returns top 12 most relevant
-
-- **`llm.py`** — Generate Answers
-  - `call_llm(query, chunks)` → Calls Groq (Llama 3.3 or Mixtral, ChatGPT-OSS), generates answer
-
-- **`audit.py`** — Logging
-  - `audit_log(user_id, query, used_doc_ids)` → Inserts row into `audit_queries` table
-
-**Think of services as specialist workers:**
-- `auth.py` = Security guard (who's allowed in?)
-- `embeddings.py` = Translator (text → numbers)
-- `retrieval.py` = Librarian (find relevant documents)
-- `llm.py` = Writer (synthesize answer)
-- `audit.py` = Recordkeeper (log everything)
-
-#### `app/db/client.py` — Database Connection
-- Creates connection pool to Postgres (using asyncpg)
-- Provides helper functions: `fetch()`, `execute()`
-
-**Think of this as the phone line to the database.**
-
-#### `app/models/schemas.py` — Request/Response Models
-- Pydantic models define API input/output shapes
-- Example: `SearchRequest`, `SearchResponse`, `Chunk`, `DocMetadata`
-
-**Why we need this:** FastAPI auto-validates requests and generates API docs.
-
-#### Configuration Files
-- `requirements.txt` — Lists all Python packages (FastAPI, asyncpg, cohere, groq, etc.)
-- `Dockerfile` — Instructions to build backend as Docker container
-- `.env` — Environment variables (database URL, API keys) — **NEVER commit this!**
-
----
-
-### 🔧 `workers/` — Offline Ingestion Pipeline
-
-**What it is:** Python scripts that run **separately** from the web server to ingest documents.
-
-**What it does:**
-1. **Fetches pages from Notion** (via Notion API)
-2. **Converts to Markdown** (cleans up formatting, preserves structure)
-3. **Chunks text** (splits into 300-700 token pieces)
-4. **Generates embeddings** (calls Cohere to convert text → vectors)
-5. **Saves to database** (`documents` and `chunks` tables)
-
-**Why workers are separate from backend:**
-- **Backend** = Real-time (responds to user queries in <2 seconds)
-- **Workers** = Batch processing (takes 5-30 minutes to ingest 100 pages)
-- Running ingestion in the backend would block user requests
-- Workers run on a schedule (every 6 hours via cron/Lambda/Cloud Scheduler)
-
-**How it works:**
-```
-Cron triggers: python workers/ingest_notion.py --notion-db-id abc123
-  ↓
-1. Fetch Notion pages
-2. For each page:
-   a. Convert blocks → Markdown
-   b. Chunk into 300-700 tokens
-   c. Embed each chunk (Cohere)
-   d. Upsert to database
-  ↓
-Database now has searchable content
-  ↓
-Users can search via frontend → backend
-```
-
-**Main files inside `workers/`:**
-
-#### `ingest_notion.py` — Main Script
-- Entry point: Run this to sync Notion data
-- Usage: `python ingest_notion.py --notion-db-id <your-id>`
-- Orchestrates the full pipeline
-
-#### `lib/notion_client.py` — Notion API Wrapper
-- `list_notion_pages(db_id)` → Fetches all pages from a Notion database
-- `fetch_blocks(page_id)` → Gets content blocks (paragraphs, headings, lists, etc.)
-
-#### `lib/normalizer.py` — Convert Notion → Markdown
-- `normalize_to_markdown(blocks)` → Converts Notion blocks to clean Markdown
-- Preserves headings, tables, code blocks
-- Extracts `heading_path` (e.g., `['Runbook', 'Incidents', 'Step 1']`)
-
-**Why Markdown?** Easy to chunk, preserves structure, human-readable.
-
-#### `lib/chunker.py` — Split Text into Chunks
-- `chunk_markdown(md)` → Splits long documents into 300-700 token pieces
-- Adds 50-token overlap (so context isn't lost between chunks)
-
-**Why chunk?** LLMs have token limits. Sending 50 pages would fail. Chunks = bite-sized pieces.
-
-#### `lib/embeddings.py` — Generate Vectors
-- `embed(text)` → Calls Cohere API, returns 1024-dim vector
-- Same embedding model as backend (consistency is critical!)
-
-#### `lib/db_operations.py` — Database Writes
-- `upsert_document(source_id, title, project_id, ...)` → Insert or update `documents` table
-- `insert_chunk(doc_id, text, embedding, ...)` → Insert into `chunks` table
-
-**"Upsert" = Update if exists, Insert if new.** Prevents duplicates when re-running worker.
-
----
-
-### 🔧 Root Configuration Files
-
-#### `.env.example` — Environment Variable Template
-- Shows what variables you need (without actual secrets)
-- Copy to `.env` and fill in your API keys
-- **NEVER commit `.env` to git!**
-
-#### `.gitignore` — Files Git Should Ignore
-- `.env`, `node_modules/`, `__pycache__/`, `.next/`, `venv/`
-- Prevents secrets and dependencies from being committed
-
-#### `docker-compose.yml` — Local Development Setup
-- Runs backend + Postgres in Docker containers
-- Frontend runs outside Docker (better dev experience)
-- Optional: Can run everything locally without Docker
-
----
-
-## 🧩 How Everything Connects (Big Picture)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER'S BROWSER                          │
-│                                                                 │
-│  apps/web/ (Frontend)                                           │
-│  - User types question in ChatInput.tsx                         │
-│  - lib/api.ts sends POST to backend                             │
-│  - MessageList.tsx displays answer                              │
-│  - SourcesList.tsx shows citations                              │
-└────────────────────┬────────────────────────────────────────────┘
-                     │ HTTP Request (with JWT token)
-                     ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                      apps/backend/ (API Server)                 │
-│                                                                 │
-│  1. main.py receives request                                    │
-│  2. api/routes/search.py handles /api/search                    │
-│  3. services/auth.py verifies JWT                               │
-│  4. services/embeddings.py converts query → vector              │
-│  5. services/retrieval.py searches database (with ACL)          │
-│  6. services/llm.py generates answer                            │
-│  7. services/audit.py logs query                                │
-│  8. Returns JSON response                                       │
-└────────────────────┬────────────────────────────────────────────┘
-                     │ SQL Queries
-                     ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                   supabase/ (Database)                          │
-│                                                                 │
-│  - employees, projects, employee_projects (ACL)                 │
-│  - documents (metadata)                                         │
-│  - chunks (searchable text + embeddings)                        │
-│  - audit_queries (logs)                                         │
-└─────────────────────────────────────────────────────────────────┘
-                     ↑
-                     │ Upsert documents & chunks
-                     │
-┌─────────────────────────────────────────────────────────────────┐
-│                  workers/ (Ingestion Pipeline)                  │
-│                                                                 │
-│  1. ingest_notion.py runs (scheduled via cron)                  │
-│  2. lib/notion_client.py fetches pages                          │
-│  3. lib/normalizer.py converts to Markdown                      │
-│  4. lib/chunker.py splits into pieces                           │
-│  5. lib/embeddings.py generates vectors                         │
-│  6. lib/db_operations.py saves to database                      │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Key Insight:**
-- **Frontend** and **Backend** run 24/7 (respond to users in real-time)
-- **Workers** run periodically (scheduled jobs to ingest new content)
-- **Database** is the shared state (everyone reads/writes here)
-
----
-
-### Notes on UI Components
-
-**Core Components:**
-- `ChatInput.tsx`, `MessageList.tsx`, `SourcesList.tsx` — Core RAG interface
-- `login/page.tsx`, `signup/page.tsx` — Authentication
-- `Navbar.tsx`, `theme-provider.tsx` — Navigation and theming
-- `ui/*` — All shadcn/ui primitives (used throughout)
-
-**Optional Components:**
-- `documents-tab.tsx` — Browse all documents (connects to `documents` table)
-- `projects-tab.tsx` — View project memberships (connects to `employee_projects` table)
-
-Some components from initial UI prototyping may not be used and can be removed as needed.
-
----
-
-## 🔗 How Components Connect
-
-### 1. User Login Flow
-
-```
-User clicks "Login" 
-  → app/login/page.tsx
-  → lib/supabase.ts: supabase.auth.signInWithPassword(email, password)
-  → Supabase Auth validates credentials
-  → Returns JWT token
-  → Token stored in browser (Supabase handles this)
-  → Redirect to main app (app/page.tsx)
-```
-
-### 2. RAG Search Flow (End-to-End)
-
-```
-User types "How do I deploy Atlas?" 
-  → components/ChatInput.tsx captures input
-  → Calls lib/api.ts: searchKnowledge(query, jwt)
-  → 
-  
-Frontend (lib/api.ts):
-  fetch('http://localhost:8000/api/search', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${jwt}` },
-    body: JSON.stringify({ query, top_k: 12 })
-  })
-  →
-
-Backend (apps/backend/app/api/routes/search.py):
-  1. Extract JWT from Authorization header
-  2. services/auth.py: verify_jwt(token) → user_id
-  3. services/auth.py: get_user_projects(user_id) → ['Atlas', 'Phoenix']
-  4. services/embeddings.py: embed_query(query) → 1024-dim vector
-  5. services/retrieval.py: run_vector_search(vector, projects, top_k=200)
-     → Runs SQL with pgvector:
-        WHERE visibility='Public' OR project_id IN ('Atlas','Phoenix')
-        ORDER BY embedding <=> query_vector
-     → Returns 200 candidate chunks
-  6. services/retrieval.py: rerank(chunks, query) via Cohere
-     → Returns top 12 most relevant chunks
-  7. services/llm.py: call_llm(query, chunks) via Groq
-     → Generates answer with citations
-  8. services/audit.py: audit_log(user_id, query, doc_ids)
-     → Inserts into audit_queries table
-  9. Return JSON: { answer, chunks, used_doc_ids }
-  →
-
-Frontend (components/MessageList.tsx):
-  Receives response
-  → Displays answer in chat bubble
-  → components/SourcesList.tsx shows citations
-  → User clicks citation → opens Notion page
-```
-
-### 3. Document Ingestion Flow (Offline)
-
-```
-Cron job triggers (or manual run):
-  python workers/ingest_notion.py --notion-db-id abc123
-  →
-
-workers/ingest_notion.py:
-  1. lib/notion_client.py: list_notion_pages(db_id)
-     → Fetches pages from Notion API
-  2. For each page:
-     a. lib/notion_client.py: fetch_blocks(page_id)
-        → Gets all blocks (paragraphs, headings, lists, etc.)
-     b. lib/normalizer.py: normalize_to_markdown(blocks)
-        → Converts to clean Markdown
-        → Extracts heading_path (e.g., ['Runbook', 'Incidents'])
-     c. lib/chunker.py: chunk_markdown(md)
-        → Splits into 300-700 token pieces with 50-token overlap
-     d. Compute content_hash (MD5 of markdown)
-        → If hash unchanged from previous run → skip re-embedding
-     e. lib/db_operations.py: upsert_document(...)
-        → INSERT ... ON CONFLICT (source_external_id) DO UPDATE
-        → Returns doc_id
-     f. For each chunk:
-        - lib/embeddings.py: embed(chunk.text) via Cohere
-          → Returns 1024-dim vector
-        - lib/db_operations.py: insert_chunk(doc_id, chunk, embedding)
-          → INSERT into chunks table
-  →
-
-Database now has:
-  - 1 row in documents table (metadata)
-  - N rows in chunks table (searchable text + embeddings)
-```
-
-### 4. Permission Check (How ACL Works)
-
-```
-User Sarah logs in (employee_id: 550e8400-...)
-  → Backend queries:
-     SELECT project_id FROM employee_projects 
-     WHERE employee_id = '550e8400-...'
-  → Result: ['Atlas', 'Phoenix']
-  
-User asks question:
-  → Backend runs vector search with ACL:
-     SELECT c.text, d.title, d.uri
-     FROM chunks c
-     JOIN documents d ON d.doc_id = c.doc_id
-     WHERE d.deleted_at IS NULL
-       AND (
-         d.visibility = 'Public'                    -- Public docs
-         OR d.project_id = ANY(ARRAY['Atlas','Phoenix'])  -- Sarah's projects
-       )
-     ORDER BY c.embedding <=> query_vector
-     LIMIT 200
-  
-  → Only chunks from allowed documents are returned
-  → LLM never sees restricted content
-```
-
----
-
 ## 🧪 Testing
 
-### What is Unit Testing?
+### Backend Tests
 
-**Unit testing** means testing individual functions in isolation to ensure they work correctly. Instead of running the entire application, you test one function at a time with known inputs and verify the outputs.
-
-**Example:**
-```python
-# Function to test
-def embed_query(text: str) -> list[float]:
-    # Calls Cohere API to embed text
-    return cohere.embed([text])[0]
-
-# Unit test
-def test_embed_query():
-    # Test with known input
-    result = embed_query("hello world")
-    
-    # Verify output
-    assert len(result) == 1024  # Cohere v3 returns 1024 dimensions
-    assert all(isinstance(x, float) for x in result)
-    assert result != [0] * 1024  # Not all zeros
-```
-
-**Benefits:**
-- Catch bugs early (before they reach production)
-- Verify each function works correctly in isolation
-- Make refactoring safer (tests catch breaking changes)
-- Document expected behavior (tests serve as examples)
-
-### Testing Strategy
-
-**Backend (Python):**
 ```bash
 cd apps/backend
+
+# Run all tests
 pytest tests/ -v
 
-# Test individual services with mocked dependencies:
-# - tests/test_auth.py: verify_jwt(), get_user_projects()
-# - tests/test_embeddings.py: embed_query() with mocked Cohere
-# - tests/test_retrieval.py: run_vector_search() with test database
-# - tests/test_llm.py: call_llm() with mocked Groq
+# Test handovers feature
+pytest tests/test_handovers_db.py -v      # Database layer (12 tests)
+pytest tests/test_handovers_api.py -v     # API endpoints (13 tests)
+
+# Test specific function
+pytest tests/test_handovers_db.py::test_create_handover -v
 ```
 
-**Frontend (TypeScript):**
-```bash
-cd apps/web
-npm test
-
-# Test components with React Testing Library:
-# - ChatInput.test.tsx: user can type and submit
-# - MessageList.test.tsx: messages render correctly
-# - SourcesList.test.tsx: citations display with links
-```
-
-### Manual Testing Checklist
+### Manual Testing
 
 ```bash
-# 1. Backend health check
+# 1. Health check
 curl http://localhost:8000/health
 # Expected: {"status": "healthy"}
 
-# 2. Database has data
+# 2. Test search (with JWT)
+curl -X POST http://localhost:8000/api/search \
+  -H "Authorization: Bearer <your-jwt-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "How do I deploy Atlas?", "top_k": 12}'
+
+# 3. Test handovers
+curl -X GET http://localhost:8000/api/handovers \
+  -H "Authorization: Bearer <your-jwt-token>"
+
+# 4. Check database has data
 psql $DATABASE_URL -c "SELECT COUNT(*) FROM chunks;"
 # Expected: > 0
-
-# 3. Full flow test
-# - Open http://localhost:3000
-# - Log in with test account
-# - Type: "What is Atlas?"
-# - Verify: Answer appears + 3-5 sources shown
-# - Click source → Notion page opens in new tab
-
-# 4. Permission test
-# - Create user with no projects
-# - Log in as that user
-# - Search should only return Public documents
 ```
+
+### Frontend Testing
+
+1. Open http://localhost:3000
+2. Login with test credentials:
+   - Employee: `employee@company.com` / `dev`
+   - Manager: `manager@company.com` / `dev`
+3. Test search in Chatbot section
+4. Test handovers:
+   - Create handover as manager
+   - View received handovers as employee
+   - Acknowledge and complete handovers
 
 ---
 
 ## 🚀 Deployment
 
-### Containerized Deployment
-
-Both frontend and backend are deployed as Docker containers to the same cloud region for low latency.
-
-**Step 1: Build Docker Images**
+### Development (Docker Compose)
 
 ```bash
-# Build frontend
-cd apps/web
-docker build -t rag-frontend:latest .
+# Build and start all services
+docker-compose up --build
 
-# Build backend
-cd ../backend
+# Or run in background
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Production (AWS - Recommended)
+
+**Full guide:** [`AWS_AMPLIFY_APPRUNNER_GUIDE.md`](./AWS_AMPLIFY_APPRUNNER_GUIDE.md)
+
+**Summary:**
+1. **Backend → AWS App Runner** (from ECR Docker image)
+2. **Frontend → AWS Amplify** (from GitHub repo)
+3. **Database → Supabase** (already hosted)
+4. **Workers → AWS Lambda** (scheduled with EventBridge)
+
+**Quick steps:**
+
+```bash
+# 1. Push code to GitHub
+git push origin main
+
+# 2. Build and push backend to ECR
+cd apps/backend
+aws ecr create-repository --repository-name rag-backend --region us-east-1
 docker build -t rag-backend:latest .
+docker tag rag-backend:latest <ECR_URI>:latest
+docker push <ECR_URI>:latest
+
+# 3. Create App Runner service (via AWS Console)
+# - Container registry: ECR
+# - Image URI: <ECR_URI>:latest
+# - Port: 8000
+# - Environment variables: DATABASE_URL, SUPABASE_JWT_SECRET, COHERE_API_KEY, GROQ_API_KEY, CORS_ORIGINS
+
+# 4. Deploy frontend to Amplify (via AWS Console)
+# - Connect GitHub repo
+# - Branch: main
+# - Build settings: Auto-detected (Next.js)
+# - Root directory: apps/web
+# - Environment variables: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# 5. Update CORS
+# Update backend CORS_ORIGINS to include Amplify URL
 ```
 
-**Step 2: Push to Container Registry**
+**Cost:** ~$10-15/month with AWS free tier
 
-```bash
-# Tag for your registry (Docker Hub, ECR, GCR, etc.)
-docker tag rag-frontend:latest <your-registry>/rag-frontend:latest
-docker tag rag-backend:latest <your-registry>/rag-backend:latest
+### Alternative Deployments
 
-# Push
-docker push <your-registry>/rag-frontend:latest
-docker push <your-registry>/rag-backend:latest
-```
+**Vercel + Render:**
+- Frontend → Vercel (free)
+- Backend → Render (free tier available)
 
-**Step 3: Deploy to Cloud**
+**Google Cloud:**
+- Frontend → Cloud Run
+- Backend → Cloud Run
+- Workers → Cloud Run Jobs (scheduled)
 
-**Option A: AWS (ECS/Fargate)**
-```bash
-# Deploy using ECS task definitions
-# Frontend: Public ALB → Port 3000
-# Backend: Internal ALB → Port 8000
-# Both in same VPC for fast communication
-```
+**Azure:**
+- Frontend → Azure Static Web Apps
+- Backend → Azure Container Apps
 
-**Option B: Google Cloud (Cloud Run)**
-```bash
-gcloud run deploy rag-frontend \
-  --image <your-registry>/rag-frontend:latest \
-  --region us-central1
+---
 
-gcloud run deploy rag-backend \
-  --image <your-registry>/rag-backend:latest \
-  --region us-central1 \
-  --no-allow-unauthenticated  # Internal only
-```
+## ⚠️ Authentication Status
 
-**Option C: Azure (Container Apps)**
-```bash
-az containerapp create \
-  --name rag-frontend \
-  --image <your-registry>/rag-frontend:latest \
-  --resource-group myResourceGroup
-```
+### Current Setup (Development)
 
-**Step 4: Configure Environment Variables**
+**Mock Authentication:**
+- Frontend uses hardcoded credentials (see `apps/web/components/login-form.tsx`)
+- Passwords are just "dev"
+- Pre-generated JWT tokens stored in localStorage
+- Works for demos and local testing only
 
-Set environment variables in your cloud provider's dashboard:
+**Test Users:**
+- **Employee:** `employee@company.com` / `dev`
+  - Projects: demo-project, atlas-api
+  - Role: member (read-only)
+- **Manager:** `manager@company.com` / `dev`
+  - Projects: all projects
+  - Role: manager (can upload, create handovers)
 
-**Frontend:**
-- `NEXT_PUBLIC_API_URL` (internal backend URL)
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+### Production Requirements
 
-**Backend:**
-- `DATABASE_URL`
-- `SUPABASE_JWT_SECRET`
-- `COHERE_API_KEY`
-- `GROQ_API_KEY`
-- `CORS_ORIGINS`
+**For real deployment, you MUST:**
 
-**Step 5: Deploy Workers**
+1. **Create real Supabase Auth users:**
+   - Supabase Dashboard → Authentication → Users → Add user
+   - Use real email addresses
+   - Users sign up via frontend
 
-Workers run as scheduled jobs (not web servers):
+2. **Replace mock login with Supabase Auth:**
+   ```typescript
+   // apps/web/components/login-form.tsx
+   import { createClient } from '@supabase/supabase-js'
 
-**AWS Lambda + EventBridge:**
-```bash
-# Package workers as Lambda function
-cd workers
-zip -r function.zip .
-aws lambda create-function --function-name ingest-notion --runtime python3.11 --handler ingest_notion.handler --zip-file fileb://function.zip
+   const supabase = createClient(
+     process.env.NEXT_PUBLIC_SUPABASE_URL,
+     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+   )
 
-# Schedule with EventBridge (every 6 hours)
-aws events put-rule --schedule-expression "rate(6 hours)" --name ingest-schedule
-```
+   // In handleSubmit:
+   const { data, error } = await supabase.auth.signInWithPassword({
+     email,
+     password
+   })
 
-**Google Cloud Run Jobs:**
-```bash
-gcloud run jobs create ingest-notion \
-  --image <your-registry>/workers:latest \
-  --region us-central1
+   if (error) {
+     setError(error.message)
+     return
+   }
 
-# Schedule with Cloud Scheduler
-gcloud scheduler jobs create http ingest-schedule \
-  --schedule="0 */6 * * *" \
-  --uri="https://run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT/jobs/ingest-notion:run"
-```
+   // Supabase auto-stores JWT in cookies
+   router.push('/home')
+   ```
 
-### Database
+3. **Sync employees table with Supabase Auth:**
+   ```sql
+   -- After user signs up, insert into employees table
+   INSERT INTO employees (employee_id, email, display_name)
+   VALUES (auth.uid(), auth.email(), 'User Name')
+   ON CONFLICT (employee_id) DO NOTHING;
+   ```
 
-Database is already hosted on Supabase. No additional deployment needed — just ensure your backend and workers have the correct `DATABASE_URL`.
+4. **Token Expiry:**
+   - Current test tokens expire in ~1 year
+   - Production tokens should expire in 1-24 hours
+   - Supabase handles token refresh automatically
 
 ---
 
@@ -1034,7 +963,9 @@ Database is already hosted on Supabase. No additional deployment needed — just
 **Fix:**
 ```bash
 # In apps/backend/.env
-CORS_ORIGINS=http://localhost:3000,https://yourapp.com
+CORS_ORIGINS=http://localhost:3000,https://your-frontend-url.com
+
+# Restart backend
 ```
 
 ### "JWT verification failed"
@@ -1043,75 +974,77 @@ CORS_ORIGINS=http://localhost:3000,https://yourapp.com
 
 **Fix:**
 1. Go to Supabase Dashboard → Settings → API
-2. Copy "JWT Secret" (not "anon public" key)
-3. Paste into `apps/backend/.env`:
-   ```bash
+2. Copy "JWT Secret" (NOT "anon public" key)
+3. Update `apps/backend/.env`:
+   ```
    SUPABASE_JWT_SECRET=your-actual-jwt-secret
    ```
+4. Restart backend
 
-### "No results returned from search"
+### "No search results returned"
 
 **Possible causes:**
 
 1. **No chunks in database:**
    ```bash
    psql $DATABASE_URL -c "SELECT COUNT(*) FROM chunks;"
-   # If 0: Run worker to ingest data
+   # If 0: Run Notion ingestion worker
    ```
 
 2. **User has no project access:**
    ```sql
    -- Check user's projects
-   SELECT project_id FROM employee_projects WHERE employee_id = 'user-id';
-   
+   SELECT project_id FROM employee_projects
+   WHERE employee_id = '<user-id>';
+
    -- Add user to project
-   INSERT INTO employee_projects (employee_id, project_id, role) 
-   VALUES ('user-id', 'Atlas', 'viewer');
+   INSERT INTO employee_projects (employee_id, project_id, role)
+   VALUES ('<user-id>', 'demo-project', 'member');
    ```
 
-3. **All docs are Private and user not in any project:**
+3. **All docs are Private:**
    ```sql
    -- Make one doc Public for testing
    UPDATE documents SET visibility = 'Public' WHERE doc_id = 1;
    ```
 
+### "Notion API error"
+
+**Common issues:**
+
+1. **Wrong API key:**
+   - Get integration token from [notion.so/my-integrations](https://www.notion.so/my-integrations)
+   - Must start with `secret_`
+
+2. **Database not shared with integration:**
+   - Open Notion database
+   - Click `•••` → "Connections" → Add your integration
+
+3. **Rate limits:**
+   - Notion API: 3 requests/second
+   - Add delays in `workers/lib/notion_client.py`
+
+### "Cohere API rate limit exceeded"
+
+**Cause:** Free tier limits (100 requests/minute).
+
+**Fix:**
+1. Upgrade Cohere plan, OR
+2. Add rate limiting in `workers/lib/embeddings.py`:
+   ```python
+   import time
+   time.sleep(0.1)  # Between API calls
+   ```
+
 ### "pgvector extension not found"
 
-**Cause:** Postgres doesn't have pgvector installed.
+**Cause:** PostgreSQL doesn't have pgvector installed.
 
 **Fix:**
 ```sql
 -- In Supabase SQL editor
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
-
-### "Cohere API rate limit exceeded"
-
-**Cause:** Free tier limits (100 requests/minute for embeddings).
-
-**Fix:**
-1. Upgrade Cohere plan, or
-2. Add rate limiting in `workers/lib/embeddings.py`:
-   ```python
-   import time
-   time.sleep(0.1)  # Between embed calls
-   ```
-
-### "Worker fails with 'Notion API error'"
-
-**Common issues:**
-
-1. **Wrong Notion API key:**
-   - Get integration token from [notion.so/my-integrations](https://www.notion.so/my-integrations)
-   - Must grant integration access to your database
-
-2. **Database not shared with integration:**
-   - Open Notion database
-   - Click "•••" → "Connections" → Add your integration
-
-3. **Rate limits:**
-   - Notion API: 3 requests/second
-   - Add delays in `workers/lib/notion_client.py`
 
 ---
 
@@ -1124,14 +1057,17 @@ CREATE EXTENSION IF NOT EXISTS vector;
 - **Cohere:** [docs.cohere.com](https://docs.cohere.com)
 - **Groq:** [console.groq.com/docs](https://console.groq.com/docs)
 - **shadcn/ui:** [ui.shadcn.com](https://ui.shadcn.com)
+- **Notion API:** [developers.notion.com](https://developers.notion.com)
 
 ---
 
 ## 📋 API Reference
 
-### POST /api/search
+### Core Endpoints
 
-Search for documents and generate an answer.
+#### POST /api/search
+
+Search documents and handovers, generate AI answer.
 
 **Request:**
 ```json
@@ -1149,63 +1085,132 @@ Authorization: Bearer <jwt-token>
 **Response:**
 ```json
 {
-  "answer": "To deploy the Atlas API, follow these steps: 1. Run `make deploy`...",
+  "answer": "To deploy the Atlas API, follow these steps: ...",
   "chunks": [
     {
       "doc_id": 123,
+      "handover_id": null,
       "title": "Atlas Deploy Guide",
-      "snippet": "To deploy Atlas API, first ensure all environment variables...",
+      "text": "To deploy Atlas API, first ensure...",
       "uri": "https://notion.so/abc123",
+      "source_type": "document",
       "score": 0.87
+    },
+    {
+      "doc_id": null,
+      "handover_id": 5,
+      "title": "Atlas Handover",
+      "text": "Deployment steps: make deploy...",
+      "uri": "handover://5",
+      "source_type": "handover",
+      "score": 0.82
     }
   ],
-  "used_doc_ids": [123, 456, 789]
+  "used_doc_ids": [123, 456],
+  "used_handover_ids": [5]
 }
 ```
 
-### GET /api/docs/:doc_id
+#### POST /api/handovers
 
-Get metadata for a specific document (with ACL check).
+Create a new handover.
 
-**Headers:**
+**Request:**
+```json
+{
+  "to_employee_id": "660e8400-e29b-41d4-a716-446655440001",
+  "title": "Atlas Project Handover",
+  "project_id": "atlas-api",
+  "context": "Transitioning Atlas project to new team member",
+  "current_status": "API deployed, documentation updated",
+  "next_steps": [
+    { "task": "Review deployment checklist", "done": false },
+    { "task": "Set up local dev environment", "done": false }
+  ],
+  "resources": [
+    { "type": "doc", "doc_id": 123, "title": "Atlas Deploy Guide" },
+    { "type": "link", "url": "https://github.com/atlas", "title": "Atlas Repo" }
+  ],
+  "contacts": [
+    { "name": "John Doe", "email": "john@company.com", "role": "Tech Lead" }
+  ],
+  "additional_notes": "Feel free to reach out with questions",
+  "cc_employee_ids": ["770e8400-e29b-41d4-a716-446655440002"]
+}
 ```
-Authorization: Bearer <jwt-token>
+
+**Response:** (201 Created)
+```json
+{
+  "handover_id": 10,
+  "from_employee_id": "550e8400-e29b-41d4-a716-446655440000",
+  "to_employee_id": "660e8400-e29b-41d4-a716-446655440001",
+  "from_name": "John Employee",
+  "from_email": "employee@company.com",
+  "title": "Atlas Project Handover",
+  "status": "pending",
+  "created_at": "2025-01-15T10:30:00Z",
+  ...
+}
 ```
+
+#### GET /api/handovers
+
+List all handovers for authenticated user.
 
 **Response:**
 ```json
 {
-  "doc_id": 123,
-  "title": "Atlas Deploy Guide",
-  "project_id": "Atlas",
-  "visibility": "Private",
-  "uri": "https://notion.so/abc123",
-  "updated_at": "2025-01-15T10:30:00Z",
-  "language": "en"
+  "received": [
+    { "handover_id": 10, "title": "Atlas Handover", "status": "pending", ... }
+  ],
+  "sent": [
+    { "handover_id": 11, "title": "Phoenix Handover", "status": "acknowledged", ... }
+  ]
 }
 ```
 
-**Error:** 403 if user doesn't have access to this document.
+#### PATCH /api/handovers/:id
+
+Update handover status (recipient only).
+
+**Request:**
+```json
+{
+  "status": "acknowledged"  // or "completed"
+}
+```
 
 ---
 
 ## 🔮 Future Enhancements
 
-Potential features for future versions:
-
 - **Additional Data Sources:** Google Drive, Confluence, Slack, GitHub
-- **Hybrid Search:** Combine vector search with BM25 keyword search for better accuracy
-- **Multi-turn Conversations:** Chat history and follow-up questions with context
-- **Fine-grained Permissions:** User-level and group-level document access controls
-- **Analytics Dashboard:** Query trends, popular documents, user activity metrics
-- **Feedback Loop:** Thumbs up/down on answers to improve retrieval quality
-- **Document Upload:** Manual file uploads (PDFs, DOCX, TXT) without external integrations
-- **Smart Summaries:** Auto-generate summaries for long documents
-- **Team Collaboration:** Share searches, annotate results, collaborative notes
-- **Advanced Filters:** Filter by date range, document type, project, author
-- **Mobile App:** iOS/Android native apps for on-the-go access
+- **Hybrid Search:** Combine vector + BM25 keyword search
+- **Multi-turn Conversations:** Chat history and follow-up questions
+- **Fine-grained Permissions:** User-level and group-level access
+- **Analytics Dashboard:** Query trends, popular documents, user activity
+- **Feedback Loop:** Thumbs up/down to improve retrieval
+- **Document Upload Improvements:** OCR for scanned PDFs
+- **Smart Summaries:** Auto-generate document summaries
+- **Mobile App:** iOS/Android native apps
 - **Voice Search:** Ask questions via voice input
-- **Export Results:** Export search results and answers to PDF/Markdown
+- **Export Results:** Export to PDF/Markdown
+- **Handover Templates:** Pre-defined templates for common transitions
+- **Handover Reminders:** Automatic notifications for pending handovers
 
 ---
 
+## 👥 Contributors
+
+Built by the RAG Knowledge Hub team at PNU Computer Science Department.
+
+---
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+---
+
+**🚀 Ready to deploy? Check out [`AWS_AMPLIFY_APPRUNNER_GUIDE.md`](./AWS_AMPLIFY_APPRUNNER_GUIDE.md) for step-by-step AWS deployment!**

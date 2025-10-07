@@ -6,24 +6,34 @@ This is the main file that creates and configures the FastAPI app.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from apps/backend/.env
-load_dotenv()
+# Load environment variables from apps/backend/.env explicitly
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
-from app.api.routes import search, docs, upload, notion
+from app.api.routes import search, docs, upload, notion, handovers, employees
 from app.db.client import init_db_pool, close_db_pool
 
 
-# Create FastAPI app
+# Create FastAPI app with security scheme for Swagger UI
 app = FastAPI(
     title="RAG Knowledge Hub API",
     description="Permission-aware search API with vector embeddings and LLM-generated answers",
     version="1.0.0",
     docs_url="/docs",  # Swagger UI at http://localhost:8000/docs
-    redoc_url="/redoc"  # ReDoc at http://localhost:8000/redoc
+    redoc_url="/redoc",  # ReDoc at http://localhost:8000/redoc
+    # This makes the "Authorize" button appear in Swagger UI
+    swagger_ui_init_oauth={
+        "usePkceWithAuthorizationCodeGrant": True,
+    }
 )
+
+# Define security scheme (this adds the Authorize button)
+security = HTTPBearer()
 
 
 # Configure CORS (Cross-Origin Resource Sharing)
@@ -58,7 +68,7 @@ async def startup():
         🚀 Starting RAG Knowledge Hub API...
         ✅ Database connection pool initialized
     """
-    print("🚀 Starting RAG Knowledge Hub API...")
+    print("Starting RAG Knowledge Hub API...")
     await init_db_pool()
 
 
@@ -81,7 +91,7 @@ async def shutdown():
         🛑 Shutting down RAG Knowledge Hub API...
         ✅ Database connection pool closed
     """
-    print("🛑 Shutting down RAG Knowledge Hub API...")
+    print("Shutting down RAG Knowledge Hub API...")
     await close_db_pool()
 
 
@@ -90,6 +100,8 @@ app.include_router(search.router, prefix="/api", tags=["Search"])
 app.include_router(docs.router, prefix="/api", tags=["Documents"])
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(notion.router, prefix="/api", tags=["Notion"])
+app.include_router(handovers.router, prefix="/api", tags=["Handovers"])
+app.include_router(employees.router, prefix="/api", tags=["Employees"])
 
 
 # Health check endpoint (for monitoring)

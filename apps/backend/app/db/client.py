@@ -72,7 +72,7 @@ async def init_db_pool():
         command_timeout=60
     )
 
-    print(f"✅ Database connection pool initialized (min_size=10, max_size=20)")
+    print(f"Database connection pool initialized (min_size=10, max_size=20)")
 
 
 async def close_db_pool():
@@ -103,7 +103,7 @@ async def close_db_pool():
 
     if pool:
         await pool.close()
-        print("✅ Database connection pool closed")
+        print("Database connection pool closed")
 
 
 def get_db_pool() -> asyncpg.Pool:

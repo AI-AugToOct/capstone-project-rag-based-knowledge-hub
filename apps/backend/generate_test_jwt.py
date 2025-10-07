@@ -27,18 +27,18 @@ if not JWT_SECRET:
 USERS = {
     "employee": {
         "id": "550e8400-e29b-41d4-a716-446655440000",
-        "email": "test@company.com",
-        "name": "Test User",
+        "email": "employee@company.com",
+        "name": "John Employee",
         "role_type": "Regular Employee (member)",
         "projects": ["demo-project", "atlas-api"],
         "can_upload": False
     },
     "manager": {
         "id": "660e8400-e29b-41d4-a716-446655440001",
-        "email": "sarah.chen@company.com",
-        "name": "Sarah Chen",
+        "email": "manager@company.com",
+        "name": "Sarah Manager",
         "role_type": "Manager",
-        "projects": ["atlas-api", "phoenix-ui"],
+        "projects": ["demo-project", "atlas-api", "phoenix-ui", "internal-tools"],
         "can_upload": True
     }
 }

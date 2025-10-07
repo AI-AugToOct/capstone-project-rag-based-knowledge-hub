@@ -1,8 +1,6 @@
 'use client'
 
-// @ts-ignore
 import * as React from 'react'
-// @ts-ignore
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
 
 import { cn } from '@/lib/utils'
