@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { X } from "lucide-react"
+import { X, AlertCircle, Copy, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -28,7 +28,15 @@ export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [showCredentials, setShowCredentials] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
   const router = useRouter()
+
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,8 +69,94 @@ export function LoginForm() {
 
   return (
     <div className="relative z-10 w-full max-w-2xl rounded-3xl bg-white p-12 shadow-2xl">
+      {/* Dev Credentials Info Button */}
+      <div className="absolute left-8 top-8">
+        <div className="relative">
+          <AlertCircle
+            className="h-6 w-6 text-[#3E4DF9] cursor-pointer transition-colors hover:text-[#3240D9]"
+            onClick={() => setShowCredentials(!showCredentials)}
+          />
+
+          {/* Tooltip */}
+          {showCredentials && (
+            <>
+              {/* Backdrop to close on click outside */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowCredentials(false)}
+              />
+              <div className="absolute left-0 top-8 w-72 rounded-lg bg-gray-900 p-4 text-white shadow-xl z-50">
+              <p className="mb-3 text-xs font-semibold text-gray-300">DEV CREDENTIALS</p>
+
+              {/* Employee */}
+              <div className="mb-3 space-y-1">
+                <p className="text-xs font-semibold text-[#8B92FF]">Employee:</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono">employee@company.com</span>
+                  <button
+                    onClick={() => handleCopy("employee@company.com", "employee-email")}
+                    className="ml-2 rounded p-1 hover:bg-gray-800 transition-colors"
+                  >
+                    {copiedField === "employee-email" ? (
+                      <Check className="h-3 w-3 text-green-400" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono">dev</span>
+                  <button
+                    onClick={() => handleCopy("dev", "employee-pass")}
+                    className="ml-2 rounded p-1 hover:bg-gray-800 transition-colors"
+                  >
+                    {copiedField === "employee-pass" ? (
+                      <Check className="h-3 w-3 text-green-400" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Manager */}
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-[#8B92FF]">Manager:</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono">manager@company.com</span>
+                  <button
+                    onClick={() => handleCopy("manager@company.com", "manager-email")}
+                    className="ml-2 rounded p-1 hover:bg-gray-800 transition-colors"
+                  >
+                    {copiedField === "manager-email" ? (
+                      <Check className="h-3 w-3 text-green-400" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-mono">dev</span>
+                  <button
+                    onClick={() => handleCopy("dev", "manager-pass")}
+                    className="ml-2 rounded p-1 hover:bg-gray-800 transition-colors"
+                  >
+                    {copiedField === "manager-pass" ? (
+                      <Check className="h-3 w-3 text-green-400" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Close button */}
-      <button className="absolute left-8 top-8 text-gray-400 transition-colors hover:text-gray-600" aria-label="Close">
+      <button className="absolute right-8 top-8 text-gray-400 transition-colors hover:text-gray-600" aria-label="Close">
         <X className="h-6 w-6" />
       </button>
 
@@ -101,12 +195,6 @@ export function LoginForm() {
             >
               Log in
             </Button>
-          </div>
-
-          <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Dev Credentials:</p>
-            <p>employee@company.com / dev</p>
-            <p>manager@company.com / dev</p>
           </div>
         </form>
       </div>

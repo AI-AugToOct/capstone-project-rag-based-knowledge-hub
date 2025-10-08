@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -24,9 +23,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;700;900&family=Tajawal:wght@400;700;900&family=Rakkas&family=Lalezar&family=Markazi+Text:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700;900&display=swap" rel="stylesheet" />
+      </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
         {children}
-        <Analytics />
       </body>
     </html>
   )

@@ -59,6 +59,47 @@ export function AiHubLanding() {
               </div>
             </motion.div>
           </div>
+
+          {/* Arabic Text Overlay - Top Right Corner */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="absolute -right-8 top-1 lg:-right-12 xl:-right-16 lg:top-2 z-20 hidden md:block"
+          >
+            <div className="text-right">
+              {/* Main Name */}
+              <h2
+                className="text-4xl lg:text-5xl font-black text-white mb-1"
+                style={{
+                  fontFamily: "'Lalezar', cursive",
+                  textShadow: '0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(255, 255, 255, 0.1)',
+                  letterSpacing: '0.02em',
+                  lineHeight: '1'
+                }}
+              >
+                غنّام
+              </h2>
+              {/* Subtitle */}
+              <p
+                className="text-lg lg:text-xl font-semibold text-white/95"
+                style={{
+                  fontFamily: "'Noto Kufi Arabic', sans-serif",
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                  letterSpacing: '0.02em'
+                }}
+              >
+                !كل العلوم الغانمة
+              </p>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="relative mx-auto max-w-7xl">
+          <div className="grid items-center gap-8 md:grid-cols-2">
+            {/* Spacer for layout */}
+            <div></div>
+          </div>
         </div>
       </section>
 
@@ -73,8 +114,8 @@ export function AiHubLanding() {
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="text-center"
             >
-              <div className="mb-2 text-5xl font-bold text-[#3E4DF9]">85%</div>
-              <p className="text-gray-600">faster information retrieval</p>
+              <div className="mb-3 text-5xl font-bold text-[#3E4DF9]">Instant</div>
+              <p className="text-lg text-gray-600">AI-powered search</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
@@ -83,8 +124,8 @@ export function AiHubLanding() {
               transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
               className="text-center"
             >
-              <div className="mb-2 text-5xl font-bold text-[#3E4DF9]">70%</div>
-              <p className="text-gray-600">reduction in onboarding time</p>
+              <div className="mb-3 text-5xl font-bold text-[#3E4DF9]">Hours, not weeks</div>
+              <p className="text-lg text-gray-600">employee onboarding</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
@@ -93,8 +134,8 @@ export function AiHubLanding() {
               transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
               className="text-center"
             >
-              <div className="mb-2 text-5xl font-bold text-[#3E4DF9]">95%</div>
-              <p className="text-gray-600">improvement in data confidentiality</p>
+              <div className="mb-3 text-5xl font-bold text-[#3E4DF9]">Role-based</div>
+              <p className="text-lg text-gray-600">access control</p>
             </motion.div>
           </div>
         </div>
