@@ -50,6 +50,11 @@ async def create_handover_endpoint(
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+    # Check if user is a manager
+    is_manager = await auth.check_user_is_manager(user_id, request.project_id)
+    if not is_manager:
+        raise HTTPException(status_code=403, detail="Only managers can create handovers")
+
     # Validate: user can't send handover to themselves
     if user_id == request.to_employee_id:
         raise HTTPException(status_code=400, detail="Cannot create handover to yourself")

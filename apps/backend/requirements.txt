@@ -1,5 +1,5 @@
 # FastAPI and ASGI server
-fastapi==0.104.1
+fastapi==0.118.0
 uvicorn[standard]==0.24.0
 pydantic==2.11.10
 
@@ -13,6 +13,7 @@ websockets==15.0.1         # Required by realtime
 # AI Services
 cohere==4.37               # Embeddings and reranking
 groq==0.4.1                # LLM inference
+tiktoken==0.5.2            # Token counting for chunking
 
 # Authentication
 PyJWT>=2.8.0                       # JWT handling (actively maintained, no deprecation warnings)

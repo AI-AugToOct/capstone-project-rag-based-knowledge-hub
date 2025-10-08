@@ -63,6 +63,11 @@ async def upload_document(
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
+    # Check if user is a manager
+    is_manager = await auth.check_user_is_manager(user_id, project_id)
+    if not is_manager:
+        raise HTTPException(status_code=403, detail="Only managers can upload documents")
+
     # --------- Step 2: Validate Inputs ---------
     if visibility not in VALID_VISIBILITIES:
         raise HTTPException(status_code=400, detail=f"Invalid visibility. Must be one of: {VALID_VISIBILITIES}")

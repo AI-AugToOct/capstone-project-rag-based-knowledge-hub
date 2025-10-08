@@ -2,10 +2,16 @@
 
 > **Enterprise RAG system with permission-aware search, document management, and knowledge handover capabilities.**
 
-[![Built with Next.js](https://img.shields.io/badge/Next.js-14+-black)](https://nextjs.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688)](https://fastapi.tiangolo.com/)
-[![Postgres](https://img.shields.io/badge/PostgreSQL-15+-336791)](https://www.postgresql.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.2-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.118-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Platform-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![pgvector](https://img.shields.io/badge/pgvector-0.5+-blue)](https://github.com/pgvector/pgvector)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://docker.com/)
+[![AWS](https://img.shields.io/badge/AWS-Deployed-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
 
 ---
 
@@ -62,9 +68,11 @@ A unified platform that:
 - **Project Assignment** — Documents belong to projects with visibility controls
 
 ### 🎨 Modern Frontend
-- **Next.js 14** with App Router
-- **shadcn/ui** components with Tailwind CSS
-- **Dark mode** built-in
+- **Next.js 15** with App Router & React 19
+- **TypeScript 5** for type safety
+- **Tailwind CSS 4** with shadcn/ui components
+- **Radix UI** primitives for accessibility
+- **Dark mode** built-in with next-themes
 - **Responsive design** for desktop and mobile
 - **Separate interfaces** for employees and managers
 
@@ -171,7 +179,7 @@ User can see handover IF:
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
+- **Node.js** 20+ and npm
 - **Python** 3.11+
 - **Supabase Account** (free tier works)
 - **API Keys:**

@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { searchKnowledge } from "@/lib/api"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
   id: string
@@ -258,7 +260,13 @@ export function ChatbotSection() {
                                 message.type === "user" ? "bg-white/90 text-gray-900" : "bg-white/80 text-gray-900"
                               }`}
                             >
-                              <p className="text-[15px] leading-relaxed">{message.content}</p>
+                              {message.type === "bot" ? (
+                                <div className="prose prose-sm max-w-none text-[15px] leading-relaxed prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-900 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:text-gray-800 prose-pre:bg-gray-100 prose-pre:text-gray-800 prose-ul:text-gray-900 prose-ol:text-gray-900 prose-li:text-gray-900">
+                                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                                </div>
+                              ) : (
+                                <p className="text-[15px] leading-relaxed">{message.content}</p>
+                              )}
                             </div>
 
                             {message.type === "user" && (
