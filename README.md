@@ -1210,14 +1210,7 @@ Update handover status (recipient only).
 ---
 
 ## 👥 Contributors
-
-Built by the RAG Knowledge Hub team at PNU Computer Science Department.
-
----
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+To be inserted
 
 ---
 
