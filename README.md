@@ -16,6 +16,63 @@
 
 ---
 
+## 🔗 Quick Links
+
+**🚀 Get Started:** [Live Demo](#-live-demo) • [Quick Start](#-quick-start) • [Deployment Guide](./DEPLOYMENT_GUIDE.md)
+
+**📖 Learn More:** [Architecture](#%EF%B8%8F-architecture) • [Features](#-features) • [API Reference](#-api-reference)
+
+**💰 Costs:** [Pricing Breakdown](#-pricing) • [~$57-64/month production](#current-deployment-cost-breakdown)
+
+**🔧 Technical:** [Database Schema](./supabase/README.md) • [Repository Structure](#-repository-structure) • [Troubleshooting](#-troubleshooting)
+
+---
+
+## 📑 Table of Contents
+
+### 🚀 Getting Started
+- [🌐 Live Demo](#-live-demo)
+- [📖 Overview](#-overview)
+- [✨ Features](#-features)
+- [🚀 Quick Start](#-quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Installation (30 minutes)](#installation-30-minutes)
+
+### 🏗️ Technical Documentation
+- [🏗️ Architecture](#%EF%B8%8F-architecture)
+  - [Database Schema](#database-schema)
+  - [High-Level Flow](#high-level-flow)
+  - [Access Control Logic](#access-control-logic)
+- [📂 Repository Structure](#-repository-structure)
+- [🧩 Feature Deep Dives](#-feature-deep-dives)
+  - [1. Employee Handovers](#1-employee-handovers)
+  - [2. Notion Ingestion](#2-notion-ingestion)
+  - [3. RAG Search Flow](#3-rag-search-flow-end-to-end)
+
+### ⚙️ Configuration & Development
+- [🌍 Environment Variables](#-environment-variables)
+- [🧪 Testing](#-testing)
+- [🌐 Browser Support](#-browser-support--compatibility)
+
+### 🚢 Deployment & Operations
+- [🚀 Deployment](#-deployment)
+  - [Current Production Deployment](#-current-production-deployment)
+  - [Development (Docker Compose)](#development-docker-compose)
+  - [Production Setup Guide](#production-setup-guide)
+- [💰 Pricing](#-pricing)
+  - [Current Deployment Cost Breakdown](#current-deployment-cost-breakdown)
+  - [Cost by Usage Level](#cost-by-usage-level)
+  - [Self-Hosted Alternative](#-self-hosted-alternative-full-cost-control)
+
+### 📚 Reference & Help
+- [🐛 Troubleshooting](#-troubleshooting)
+- [📚 Additional Resources](#-additional-resources)
+- [📋 API Reference](#-api-reference)
+- [🔮 Future Enhancements](#-future-enhancements)
+- [👥 Contributors](#-contributors)
+
+---
+
 ## 🌐 Live Demo
 
 **Try it now:** [https://ghannam.vercel.app/](https://ghannam.vercel.app/)
