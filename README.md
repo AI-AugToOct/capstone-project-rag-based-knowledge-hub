@@ -955,7 +955,7 @@ Our production stack:
 3. **Database → Supabase** (PostgreSQL + pgvector)
 4. **Workers → Manual/Scheduled** (Notion ingestion)
 
-**Estimated Monthly Cost:** ~$57-109 (see [Pricing](#-pricing) section below)
+**Estimated Monthly Cost:** ~$57-64 (see [Pricing](#-pricing) section below)
 
 ---
 
