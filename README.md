@@ -11,7 +11,18 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://docker.com/)
-[![AWS](https://img.shields.io/badge/AWS-Deployed-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel&logoColor=white)](https://vercel.com/)
+[![AWS](https://img.shields.io/badge/AWS-App_Runner-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
+
+---
+
+## 🌐 Live Demo
+
+**Try it now:** [https://ghannam.vercel.app/](https://ghannam.vercel.app/)
+
+**Demo Credentials:**
+- **Employee**: `employee@company.com` / `dev`
+- **Manager**: `manager@company.com` / `dev`
 
 ---
 
@@ -80,13 +91,30 @@ A unified platform that:
 
 ## 🏗️ Architecture
 
+### Database Schema
+
+**Visual Schema Diagram:** [`supabase/schema.svg`](./supabase/schema.svg)
+
+Our database consists of 7 interconnected tables:
+- **employees** - User registry (synced with Supabase Auth)
+- **projects** - Access boundaries for documents
+- **employee_projects** - User-to-project assignments (ACL)
+- **documents** - Document metadata (title, project, visibility)
+- **handovers** - Knowledge transfer records
+- **chunks** - Searchable content with embeddings (from docs + handovers)
+- **audit_queries** - Query logs for compliance
+
+See [`supabase/README.md`](./supabase/README.md) for detailed schema documentation.
+
+---
+
 ### High-Level Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        USER INTERACTION                         │
 ├─────────────────────────────────────────────────────────────────┤
-│  1. User logs in (dev: mock auth | prod: Supabase Auth)        │
+│  1. User logs in via Supabase Auth                             │
 │  2. User asks question: "How do I deploy Atlas?"                │
 │  3. User views received handovers from departing employees      │
 └─────────────────────────────────────────────────────────────────┘
@@ -347,11 +375,12 @@ capstone-project-rag-based-knowledge-hub/
 ├── README.md                         ← You are here
 ├── .env.example                      ← Environment variable template
 ├── docker-compose.yml                ← Docker deployment (backend + frontend)
-├── AWS_AMPLIFY_APPRUNNER_GUIDE.md    ← Full AWS deployment guide
-├── DEMO_DEPLOYMENT.md                ← Quick demo deployment guide
-├── HANDOVERS_TESTING_GUIDE.md        ← How to test handovers feature
+├── DEPLOYMENT_GUIDE.md               ← Vercel + AWS App Runner deployment guide
+├── ARCHITECTURE.md                   ← Detailed architecture documentation
 │
 ├── supabase/                         ← Database schema and migrations
+│   ├── README.md                     ← Database schema guide (detailed)
+│   ├── schema.svg                    ← Visual ER diagram
 │   ├── migrations/
 │   │   ├── 20251002234351_updated_db.sql          ← Base schema
 │   │   ├── 20251007000000_add_handovers.sql       ← Handovers feature
@@ -359,10 +388,10 @@ capstone-project-rag-based-knowledge-hub/
 │   └── seed.sql                      ← Test data (employees, projects)
 │
 ├── apps/
-│   ├── web/                          ← Next.js 14 Frontend
+│   ├── web/                          ← Next.js 15 Frontend
 │   │   ├── app/
 │   │   │   ├── page.tsx              ← Landing page
-│   │   │   ├── login/page.tsx        ← Login page (dev: mock auth)
+│   │   │   ├── login/page.tsx        ← Login page
 │   │   │   ├── home/                 ← Employee dashboard
 │   │   │   ├── chatbot/              ← RAG search interface
 │   │   │   ├── handovers/            ← Handover management
@@ -371,7 +400,7 @@ capstone-project-rag-based-knowledge-hub/
 │   │   │
 │   │   ├── components/
 │   │   │   ├── ui/                   ← shadcn/ui primitives
-│   │   │   ├── login-form.tsx        ← Mock login (dev only)
+│   │   │   ├── login-form.tsx        ← Login form
 │   │   │   ├── manager-dashboard.tsx ← Manager dashboard
 │   │   │   └── [other components]    ← Feature-specific components
 │   │   │
@@ -818,7 +847,60 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM chunks;"
 
 ---
 
+## 🌐 Browser Support & Compatibility
+
+### Supported Browsers
+
+| Browser | Minimum Version | Status |
+|---------|----------------|--------|
+| **Chrome** | 90+ | ✅ Fully supported |
+| **Firefox** | 88+ | ✅ Fully supported |
+| **Safari** | 14+ | ✅ Fully supported |
+| **Edge** | 90+ | ✅ Fully supported |
+| **Opera** | 76+ | ✅ Fully supported |
+
+### Mobile Support
+
+- **iOS Safari** 14+ ✅
+- **Chrome Mobile** ✅
+- **Samsung Internet** ✅
+
+### Features
+
+- **Responsive Design**: Optimized for desktop (1920×1080), tablet (768×1024), and mobile (375×667)
+- **Dark Mode**: Built-in with next-themes
+- **Accessibility**: Keyboard navigation, ARIA labels, screen reader compatible
+- **PWA Ready**: Can be installed as a Progressive Web App
+
+### Tested Resolutions
+
+- Desktop: 1920×1080, 1440×900, 1366×768
+- Tablet: 1024×768, 768×1024
+- Mobile: 375×667, 414×896, 390×844
+
+### Known Issues
+
+- **Internet Explorer**: Not supported (deprecated by Microsoft)
+- **Safari <14**: Limited CSS Grid support
+- **Mobile keyboards**: Minor layout shifts on input focus (iOS Safari)
+
+---
+
 ## 🚀 Deployment
+
+### 🌐 Current Production Deployment
+
+**Live at:** [https://ghannam.vercel.app/](https://ghannam.vercel.app/)
+
+Our production stack:
+1. **Frontend → Vercel** (Next.js, auto-deploys from GitHub)
+2. **Backend → AWS App Runner** (FastAPI, deployed from ECR)
+3. **Database → Supabase** (PostgreSQL + pgvector)
+4. **Workers → Manual/Scheduled** (Notion ingestion)
+
+**Estimated Monthly Cost:** ~$57-109 (see [Pricing](#-pricing) section below)
+
+---
 
 ### Development (Docker Compose)
 
@@ -836,129 +918,241 @@ docker-compose logs -f
 docker-compose down
 ```
 
-### Production (AWS - Recommended)
+---
 
-**Full guide:** [`AWS_AMPLIFY_APPRUNNER_GUIDE.md`](./AWS_AMPLIFY_APPRUNNER_GUIDE.md)
+### Production Setup Guide
 
-**Summary:**
-1. **Backend → AWS App Runner** (from ECR Docker image)
-2. **Frontend → AWS Amplify** (from GitHub repo)
-3. **Database → Supabase** (already hosted)
-4. **Workers → AWS Lambda** (scheduled with EventBridge)
+#### **Option 1: Vercel + AWS App Runner** (Current Deployment)
 
-**Quick steps:**
+**Frontend (Vercel):**
 
 ```bash
 # 1. Push code to GitHub
 git push origin main
 
-# 2. Build and push backend to ECR
+# 2. Deploy to Vercel (via dashboard)
+# - Connect GitHub repo: capstone-project-rag-based-knowledge-hub
+# - Framework: Next.js
+# - Root directory: apps/web
+# - Environment variables:
+#   NEXT_PUBLIC_API_URL=https://your-backend.awsapprunner.com
+#   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# 3. Deploy → Live at https://your-app.vercel.app
+```
+
+**Backend (AWS App Runner):**
+
+```bash
+# 1. Build and push to ECR
 cd apps/backend
 aws ecr create-repository --repository-name rag-backend --region us-east-1
 docker build -t rag-backend:latest .
 docker tag rag-backend:latest <ECR_URI>:latest
 docker push <ECR_URI>:latest
 
-# 3. Create App Runner service (via AWS Console)
+# 2. Create App Runner service (via AWS Console)
 # - Container registry: ECR
 # - Image URI: <ECR_URI>:latest
 # - Port: 8000
-# - Environment variables: DATABASE_URL, SUPABASE_JWT_SECRET, COHERE_API_KEY, GROQ_API_KEY, CORS_ORIGINS
+# - CPU: 1 vCPU, Memory: 2 GB
+# - Environment variables:
+#   DATABASE_URL=your-supabase-connection-string
+#   SUPABASE_JWT_SECRET=your-jwt-secret
+#   COHERE_API_KEY=your-cohere-key
+#   GROQ_API_KEY=your-groq-key
+#   CORS_ORIGINS=https://your-app.vercel.app
 
-# 4. Deploy frontend to Amplify (via AWS Console)
-# - Connect GitHub repo
-# - Branch: main
-# - Build settings: Auto-detected (Next.js)
-# - Root directory: apps/web
-# - Environment variables: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-# 5. Update CORS
-# Update backend CORS_ORIGINS to include Amplify URL
+# 3. Copy App Runner URL → Update Vercel NEXT_PUBLIC_API_URL
 ```
 
-**Cost:** ~$10-15/month with AWS free tier
+**Full guide:** [`DEPLOYMENT_GUIDE.md`](./DEPLOYMENT_GUIDE.md)
 
-### Alternative Deployments
+---
+
+#### **Option 2: Alternative Deployments**
 
 **Vercel + Render:**
-- Frontend → Vercel (free)
+- Frontend → Vercel (free tier)
 - Backend → Render (free tier available)
+- **Cost:** $0-25/month
+
+**All Vercel (Serverless Functions):**
+- Frontend + Backend API routes → Vercel
+- **Cost:** $0-20/month
+- **Note:** May need API route optimization
 
 **Google Cloud:**
 - Frontend → Cloud Run
 - Backend → Cloud Run
 - Workers → Cloud Run Jobs (scheduled)
+- **Cost:** ~$30-60/month
 
 **Azure:**
 - Frontend → Azure Static Web Apps
 - Backend → Azure Container Apps
+- **Cost:** ~$40-80/month
 
 ---
 
-## ⚠️ Authentication Status
+## 💰 Pricing
 
-### Current Setup (Development)
+### Current Deployment Cost Breakdown
 
-**Mock Authentication:**
-- Frontend uses hardcoded credentials (see `apps/web/components/login-form.tsx`)
-- Passwords are just "dev"
-- Pre-generated JWT tokens stored in localStorage
-- Works for demos and local testing only
+Our production deployment costs (Vercel + AWS App Runner + Supabase):
 
-**Test Users:**
-- **Employee:** `employee@company.com` / `dev`
-  - Projects: demo-project, atlas-api
-  - Role: member (read-only)
-- **Manager:** `manager@company.com` / `dev`
-  - Projects: all projects
-  - Role: manager (can upload, create handovers)
+| Service | Usage | Monthly Cost |
+|---------|-------|--------------|
+| **Frontend (Vercel)** | Free tier, unlimited requests | **$0** |
+| **Backend (AWS App Runner)** | 1 vCPU + 2 GB, running 24/7 | **~$57** |
+| **Database (Supabase)** | Free tier (500 MB DB) | **$0** |
+| **Cohere API** | Embeddings + Reranking | **$0-7** |
+| **Groq API** | LLM Inference (Free tier) | **$0** |
+| **TOTAL** | Current production | **~$57-64/month** |
 
-### Production Requirements
+---
 
-**For real deployment, you MUST:**
+### Cost by Usage Level
 
-1. **Create real Supabase Auth users:**
-   - Supabase Dashboard → Authentication → Users → Add user
-   - Use real email addresses
-   - Users sign up via frontend
+| Usage Level | Queries/Day | Users | Monthly Cost | Details |
+|-------------|-------------|-------|--------------|---------|
+| **Demo** | <100 | 1-10 | **$14-20** | - Vercel Free<br>- App Runner 0.25 vCPU<br>- Supabase Free<br>- Groq Free |
+| **Small Team** | 100-500 | 10-50 | **$57-80** | - Vercel Free<br>- App Runner 1 vCPU<br>- Supabase Free<br>- Cohere ~$7<br>- Groq Free |
+| **Medium Team** | 500-2000 | 50-200 | **$109-150** | - Vercel Pro $20<br>- App Runner 1 vCPU $57<br>- Supabase Pro $25<br>- Cohere ~$30<br>- Groq ~$5 |
+| **Large Team** | 2000+ | 200+ | **$250-400** | - Vercel Pro $20<br>- App Runner 2 vCPU $114<br>- Supabase Pro $25<br>- Cohere ~$100<br>- Groq ~$20 |
 
-2. **Replace mock login with Supabase Auth:**
-   ```typescript
-   // apps/web/components/login-form.tsx
-   import { createClient } from '@supabase/supabase-js'
+---
 
-   const supabase = createClient(
-     process.env.NEXT_PUBLIC_SUPABASE_URL,
-     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-   )
+### API Pricing Details
 
-   // In handleSubmit:
-   const { data, error } = await supabase.auth.signInWithPassword({
-     email,
-     password
-   })
+#### **Cohere (Embeddings + Reranking)**
+- **Free Trial**: 1,000 API calls/month
+- **Embed v3**: $0.10 per 1,000 requests (1024-dim)
+- **Rerank v3**: $2.00 per 1,000 searches
 
-   if (error) {
-     setError(error.message)
-     return
-   }
+**Typical usage** (100 queries/day):
+- Embeddings: 100 × 30 = 3,000 embeds = **$0.30/month**
+- Reranking: 3,000 reranks = **$6/month**
+- **Total: ~$6.30/month**
 
-   // Supabase auto-stores JWT in cookies
-   router.push('/home')
-   ```
+#### **Groq (LLM Inference)**
+- **Free Tier**:
+  - Llama 3.3 70B: 30 requests/min, 131K tokens/day
+  - Mixtral 8x7B: 30 requests/min, 131K tokens/day
+- **Paid (if exceeding)**: ~$0.60/million tokens
+- **Your likely cost**: **$0-5/month** (free tier covers most use cases)
 
-3. **Sync employees table with Supabase Auth:**
-   ```sql
-   -- After user signs up, insert into employees table
-   INSERT INTO employees (employee_id, email, display_name)
-   VALUES (auth.uid(), auth.email(), 'User Name')
-   ON CONFLICT (employee_id) DO NOTHING;
-   ```
+#### **Supabase (Database)**
+- **Free Tier**: 500 MB database, 2 GB bandwidth, 50K MAU
+- **Pro ($25/month)**: 8 GB database, 50 GB bandwidth, 100K MAU
+- **Upgrade trigger**: When data exceeds 500 MB (~10,000 documents)
 
-4. **Token Expiry:**
-   - Current test tokens expire in ~1 year
-   - Production tokens should expire in 1-24 hours
-   - Supabase handles token refresh automatically
+#### **Vercel (Frontend)**
+- **Hobby (Free)**: 100 GB bandwidth, unlimited requests
+- **Pro ($20/month)**: 1 TB bandwidth, priority support
+- **Upgrade trigger**: When traffic exceeds 100 GB/month
+
+#### **AWS App Runner (Backend)**
+- **Compute**: $0.064/vCPU-hour + $0.007/GB-hour
+- **1 vCPU + 2 GB (24/7)**:
+  - vCPU: $0.064 × 730 = **$46.72**
+  - Memory: $0.007 × 2 × 730 = **$10.22**
+  - **Total: ~$57/month**
+- **0.25 vCPU + 0.5 GB (24/7)**: **~$14/month** (for low traffic)
+
+---
+
+### 💡 Cost Optimization Tips
+
+#### **For Demo/Low Traffic** ($14/month):
+```bash
+# Reduce App Runner size
+AWS Console → App Runner → Configuration → Edit
+- CPU: 0.25 vCPU
+- Memory: 0.5 GB
+```
+
+#### **For Medium Traffic** ($57-80/month):
+- Keep current setup (1 vCPU, 2 GB)
+- Stay on Supabase Free tier (until 500 MB)
+- Use Groq free tier (avoid paid LLM APIs)
+
+#### **To Minimize Costs**:
+1. **Use Groq exclusively** (free tier very generous)
+2. **Stay under Supabase 500 MB limit** (delete old audit logs)
+3. **Use Vercel Free tier** (100 GB bandwidth is plenty)
+4. **Scale down App Runner** during low-traffic periods
+
+---
+
+### 🏠 Self-Hosted Alternative (Full Cost Control)
+
+Run everything on a single VPS for predictable costs:
+
+| Provider | Specs | Monthly Cost | Sufficient For |
+|----------|-------|--------------|----------------|
+| **Hetzner** | 4 vCPU, 16 GB RAM, 160 GB SSD | **$48** | Up to 1,000 queries/day |
+| **DigitalOcean** | 4 vCPU, 8 GB RAM, 160 GB SSD | **$56** | Up to 500 queries/day |
+| **Linode** | 4 vCPU, 16 GB RAM, 320 GB SSD | **$96** | Up to 2,000 queries/day |
+
+**Setup:**
+- Frontend: Next.js (Node.js)
+- Backend: FastAPI (Python)
+- Database: PostgreSQL + pgvector
+- Embeddings: **Sentence Transformers** (free, local)
+- LLM: **Ollama** (Llama 3.1 8B, free, local)
+
+**Pros:**
+- Fixed monthly cost (no surprises)
+- Full control and privacy
+- No API limits
+
+**Cons:**
+- Requires server management
+- Need to handle scaling manually
+- Initial setup complexity
+
+**Guide for local models:**
+```bash
+# Install Sentence Transformers
+pip install sentence-transformers
+
+# Use in backend
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer('all-mpnet-base-v2')  # 768-dim
+
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+ollama run llama3.1:8b
+```
+
+---
+
+### 📊 Cost Calculator
+
+**Estimate your monthly cost:**
+
+```
+Query Volume: [Your queries/day]
+Document Count: [Number of documents]
+
+Calculation:
+- If queries/day < 100 → Groq Free ($0)
+- If queries/day > 100 → Groq Free still works (131K tokens/day limit)
+- Embeddings: (queries/day × 30 × $0.0001) = $___
+- Reranking: (queries/day × 30 × $0.002) = $___
+- App Runner: $57/month (fixed)
+- Supabase: $0 if <500 MB, $25 if >500 MB
+- Vercel: $0 if <100 GB bandwidth, $20 if >100 GB
+
+TOTAL: $57 + embeddings + reranking + optional upgrades
+```
+
+**Example:**
+- 200 queries/day
+- 5,000 documents (300 MB)
+- **Cost**: $57 (App Runner) + $6 (Cohere) + $0 (Groq) + $0 (Supabase) = **$63/month**
 
 ---
 
@@ -1210,8 +1404,14 @@ Update handover status (recipient only).
 ---
 
 ## 👥 Contributors
-To be inserted
+
+This project was developed by:
+
+- **Azzam Aljariwy** 
+- **Luluh Alyahya** 
+- **Daniyah Almusa** 
+- **Raghad Alghamdi** 
 
 ---
 
-**🚀 Ready to deploy? Check out [`AWS_AMPLIFY_APPRUNNER_GUIDE.md`](./AWS_AMPLIFY_APPRUNNER_GUIDE.md) for step-by-step AWS deployment!**
+**🚀 Ready to deploy? Check out [`DEPLOYMENT_GUIDE.md`](./DEPLOYMENT_GUIDE.md) for step-by-step deployment instructions!**
