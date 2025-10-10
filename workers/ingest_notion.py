@@ -9,7 +9,12 @@ Run this script manually or via cron/scheduler to sync Notion content.
 
 import argparse
 import hashlib
+from dotenv import load_dotenv
 from lib import notion_client, normalizer, chunker, embeddings, db_operations
+from lib.constants import CHUNK_SIZE, CHUNK_OVERLAP
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def compute_content_hash(markdown: str) -> str:
@@ -109,11 +114,18 @@ def ingest_page(page: dict):
     # Step 3: Compute content hash
     content_hash = compute_content_hash(markdown)
 
-    # Step 4: Detect metadata
+    # Step 4: Check if content changed (BEFORE upsert!)
+    if not db_operations.check_content_changed(f"notion_{page_id}", content_hash):
+        print("   └─ ✓ Content unchanged, skipping embedding")
+        return
+
+    # Step 5: Detect metadata
     project_id = detect_project_from_page(page)
     visibility = detect_visibility(page)
 
-    # Step 5: Upsert document
+    print("   ├─ Content changed, re-embedding...")
+
+    # Step 6: Upsert document
     print(f"   ├─ Upserting document (project={project_id}, visibility={visibility})...")
     doc_id = db_operations.upsert_document(
         source_external_id=f"notion_{page_id}",
@@ -124,16 +136,9 @@ def ingest_page(page: dict):
         content_hash=content_hash
     )
 
-    # Step 6: Check if content changed
-    if not db_operations.check_content_changed(f"notion_{page_id}", content_hash):
-        print("   └─ ✓ Content unchanged, skipping embedding")
-        return
-
-    print("   ├─ Content changed, re-embedding...")
-
     # Step 7: Chunk the document
     print("   ├─ Chunking document...")
-    chunks = chunker.chunk_markdown(markdown, sections, chunk_size=500, chunk_overlap=50)
+    chunks = chunker.chunk_markdown(markdown, sections, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     print(f"   ├─ Created {len(chunks)} chunks")
 
     # Step 8: Embed and insert each chunk

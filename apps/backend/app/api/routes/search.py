@@ -43,11 +43,12 @@ async def search(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to embed query: {e}")
 
-    # --------- Step 5: Vector Search with ACL ---------
+    # --------- Step 5: Vector Search with ACL (includes documents + handovers) ---------
     try:
-        candidate_chunks = retrieval.run_vector_search(
+        candidate_chunks = await retrieval.run_vector_search(
             query_vector=query_vector,
             user_projects=user_projects,
+            user_id=user_id,
             top_k=200
         )
     except Exception as e:
@@ -56,7 +57,7 @@ async def search(
     # --------- Step 6: Rerank ---------
     try:
         top_k = request.top_k or 12
-        chunks = retrieval.rerank(candidate_chunks, request.query, top_k=top_k)
+        chunks = await retrieval.rerank(candidate_chunks, request.query, top_k=top_k)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Rerank failed: {e}")
 
@@ -68,13 +69,14 @@ async def search(
         raise HTTPException(status_code=500, detail=f"LLM generation failed: {e}")
 
     # --------- Step 8: Audit Log (async, non-blocking) ---------
-    used_doc_ids = [c["doc_id"] for c in chunks]
+    # Include both doc_ids and handover_ids in audit (filter out None values)
+    used_doc_ids = [c["doc_id"] for c in chunks if c.get("doc_id")]
     asyncio.create_task(audit.audit_log(user_id, request.query, used_doc_ids))
 
     # --------- Step 9: Format Chunks for Response ---------
     response_chunks = [
         {
-            "doc_id": c["doc_id"],
+            "doc_id": c.get("doc_id") or c.get("handover_id"),  # Support both documents and handovers
             "title": c["title"],
             "snippet": c["text"][:200] + ("..." if len(c["text"]) > 200 else ""),
             "uri": c["uri"],

@@ -1,27 +1,61 @@
 #!/usr/bin/env python3
 """
-Generate a test JWT token for Supabase testing
-Run: python generate_test_jwt.py
+Generate test JWT tokens for Supabase testing
+Run: python generate_test_jwt.py [employee|manager]
+
+Examples:
+  python generate_test_jwt.py employee  # Regular employee (Test User)
+  python generate_test_jwt.py manager   # Manager (Sarah Chen)
 """
 
 import os
+import sys
 import jwt
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get your JWT secret from .env (Must have it there)
+# Get your JWT secret from .env
 JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
-
 if not JWT_SECRET:
-    print("SUPABASE_JWT_SECRET not found in .env")
+    print("[ERROR] SUPABASE_JWT_SECRET not found in .env")
     exit(1)
 
-# Create a test JWT payload
+# Test users from seed.sql
+USERS = {
+    "employee": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "email": "employee@company.com",
+        "name": "John Employee",
+        "role_type": "Regular Employee (member)",
+        "projects": ["demo-project", "atlas-api"],
+        "can_upload": False
+    },
+    "manager": {
+        "id": "660e8400-e29b-41d4-a716-446655440001",
+        "email": "manager@company.com",
+        "name": "Sarah Manager",
+        "role_type": "Manager",
+        "projects": ["demo-project", "atlas-api", "phoenix-ui", "internal-tools"],
+        "can_upload": True
+    }
+}
+
+# Parse command line argument
+user_type = sys.argv[1] if len(sys.argv) > 1 else "employee"
+
+if user_type not in USERS:
+    print(f"[ERROR] Invalid user type: {user_type}")
+    print(f"   Valid options: {', '.join(USERS.keys())}")
+    exit(1)
+
+user = USERS[user_type]
+
+# Create JWT payload
 payload = {
-    "sub": "550e8400-e29b-41d4-a716-446655440000",  # Test user ID (matches seed data)
+    "sub": user["id"],  # User ID (matches seed data)
     "role": "authenticated",
     "aud": "authenticated",
     "iat": int(datetime.now(timezone.utc).timestamp()),
@@ -32,27 +66,28 @@ payload = {
 test_jwt = jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
 print("=" * 80)
-print("✅ Generated TEST_JWT_TOKEN")
+print(f"[OK] Generated JWT for {user['name']} ({user_type})")
 print("=" * 80)
 print()
-print("FULL TOKEN (copy everything below this line):")
+print("User Info:")
+print(f"  - Name: {user['name']}")
+print(f"  - Email: {user['email']}")
+print(f"  - Role: {user['role_type']}")
+print(f"  - Projects: {', '.join(user['projects'])}")
+print(f"  - Can Upload Documents: {'Yes' if user['can_upload'] else 'No (read-only)'}")
+print()
+print("JWT Token (copy this):")
 print("-" * 80)
 print(test_jwt)
 print("-" * 80)
 print()
-print("Add to your .env file:")
-print(f'TEST_JWT_TOKEN={test_jwt}')
+print("How to Use:")
+print("  1. Open browser DevTools (F12)")
+print("  2. Go to Application > Local Storage > http://localhost:3000")
+print("  3. Add new key-value pair:")
+print(f"     Key: supabase.auth.token")
+print(f'     Value: {{"access_token":"{test_jwt[:30]}..."}}')
+print("  4. Refresh the page")
 print()
-print("Token Info:")
-print(f"  - User ID (sub): {payload['sub']}")
-print(f"  - Role: {payload['role']}")
-print(f"  - Expires: {datetime.fromtimestamp(payload['exp']).strftime('%Y-%m-%d')}")
-print()
-print("Verify it has 3 parts separated by dots (Header.Payload.Signature)")
-parts = test_jwt.split('.')
-print(f"  - Parts count: {len(parts)} {'✅' if len(parts) == 3 else '❌ ERROR!'}")
-if len(parts) == 3:
-    print(f"  - Header length: {len(parts[0])} chars")
-    print(f"  - Payload length: {len(parts[1])} chars")
-    print(f"  - Signature length: {len(parts[2])} chars")
+print(f"Token expires: {datetime.fromtimestamp(payload['exp']).strftime('%Y-%m-%d')}")
 print("=" * 80)

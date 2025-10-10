@@ -9,11 +9,11 @@ This module handles:
 #Raghad
 
 
-from typing import List
+from typing import List, Optional
 import os
 import jwt
 from fastapi import HTTPException
-from app.db.client import fetch_all
+from app.db.client import fetch_all, fetch_one
 
 
 JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "change-me")
@@ -116,72 +116,50 @@ async def get_user_projects(user_id: str) -> List[str]:
     """
     rows = await fetch_all(query, user_id)
     return [row["project_id"] for row in rows]
+
+
+async def get_user_role(user_id: str, project_id: str) -> Optional[str]:
     """
-    Retrieves all project IDs that a user has access to.
+    Get user's role for a specific project.
 
     Args:
-        user_id (str): The user's employee ID (UUID from Supabase Auth)
-            Example: "550e8400-e29b-41d4-a716-446655440000"
+        user_id: Employee ID
+        project_id: Project ID
 
     Returns:
-        List[str]: List of project IDs the user belongs to
-            Example: ["Atlas", "Phoenix", "Bolt"]
-            Example (no projects): []
-
-    Raises:
-        Exception: If database query fails
-
-    What This Does:
-        1. Connects to the database
-        2. Queries the employee_projects table
-        3. Finds all rows where employee_id matches the input
-        4. Returns a list of project_id values
-
-    Example Usage:
-        >>> user_id = "550e8400-e29b-41d4-a716-446655440000"
-        >>> projects = get_user_projects(user_id)
-        >>> print(projects)
-        ["Atlas", "Phoenix"]
-
-    SQL Query:
-        SELECT project_id
-        FROM employee_projects
-        WHERE employee_id = %s
-
-    Why We Need This:
-        - Access control is based on project membership
-        - Users can only see documents from:
-          1. Projects they belong to (this function returns those)
-          2. Public documents (visible to everyone)
-        - This list is used to filter vector search results
-
-    Example Scenario:
-        - Sarah belongs to ["Atlas", "Phoenix"]
-        - When Sarah searches, she sees:
-          ✅ Atlas documents (she's in Atlas)
-          ✅ Phoenix documents (she's in Phoenix)
-          ✅ Public documents (everyone sees these)
-          ❌ Bolt documents (she's NOT in Bolt)
-
-    Database Schema:
-        employee_projects table:
-        - employee_id (UUID) → Foreign key to employees
-        - project_id (TEXT) → Foreign key to projects
-        - role (TEXT) → 'owner', 'editor', 'viewer' (optional for V1)
-
-    Edge Cases:
-        - User exists but has no projects → return []
-        - User doesn't exist in employee_projects → return []
-        - Don't fail the query, just return empty list
-
-    Dependencies:
-        - Database connection (from app.db.client)
-        - asyncpg or psycopg2 for PostgreSQL queries
-
-    Implementation Hints:
-        - Use parameterized queries to prevent SQL injection
-        - Return empty list if no rows found (not None)
-        - Consider caching results for performance (optional)
+        'member' or 'manager' if user is in project, None otherwise
     """
-    raise NotImplementedError("TODO: Implement get_user_projects query")
+    query = """
+        SELECT role
+        FROM employee_projects
+        WHERE employee_id = $1 AND project_id = $2
+    """
+    row = await fetch_one(query, user_id, project_id)
+    return row["role"] if row else None
+
+
+async def check_user_is_manager(user_id: str, project_id: Optional[str] = None) -> bool:
+    """
+    Check if user is a manager (in any project or specific project).
+
+    Args:
+        user_id: Employee ID
+        project_id: Optional project ID. If None, checks if user is manager in ANY project
+
+    Returns:
+        True if user is a manager, False otherwise
+    """
+    if project_id:
+        role = await get_user_role(user_id, project_id)
+        return role == "manager"
+    else:
+        # Check if user is manager in ANY project
+        query = """
+            SELECT EXISTS(
+                SELECT 1 FROM employee_projects
+                WHERE employee_id = $1 AND role = 'manager'
+            )
+        """
+        row = await fetch_one(query, user_id)
+        return row["exists"] if row else False
 

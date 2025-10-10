@@ -1,69 +1,28 @@
-import Link from "next/link"
-import { Mail, Lock } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { LoginForm } from "@/components/login-form"
+import Image from "next/image"
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          {/* Logo and Title */}
-          <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg mx-auto mb-4 flex items-center justify-center">
-              <span className="text-white font-bold text-xl">K</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">KnowledgeHub</h1>
-            <h2 className="text-xl font-semibold text-gray-700">Welcome Back</h2>
-          </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gray-50">
+      {/* Decorative background shape */}
+      <div className="absolute right-0 top-0 h-full w-1/2 overflow-hidden">
+        <div className="absolute -right-32 top-0 h-full w-[600px] rounded-l-[200px] bg-gradient-to-br from-[#8B92FF] to-[#3E4DF9] opacity-90" />
+      </div>
 
-          {/* Login Form */}
-          <form className="space-y-5">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email Address
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input id="email" type="email" placeholder="you@company.com" className="pl-10 h-11" />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input id="password" type="password" placeholder="Enter your password" className="pl-10 h-11" />
-              </div>
-            </div>
-
-            {/* Forgot Password Link */}
-            <div className="flex justify-end">
-              <Link href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Forgot Password?
-              </Link>
-            </div>
-
-            {/* Sign In Button */}
-            <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium">
-              Sign In
-            </Button>
-
-            {/* Sign Up Link */}
-            <div className="text-center text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
-                Sign Up
-              </Link>
-            </div>
-          </form>
+      {/* Character Image */}
+      <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 hidden lg:block xl:right-16">
+        <div className="relative h-[350px] w-[350px] xl:h-[400px] xl:w-[400px]">
+          <Image
+            src="/GhanamLogin.png"
+            alt="Login Character"
+            fill
+            className="object-contain drop-shadow-2xl"
+            priority
+          />
         </div>
       </div>
+
+      <LoginForm />
     </div>
   )
 }

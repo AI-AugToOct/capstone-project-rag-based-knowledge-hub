@@ -21,11 +21,13 @@ from app.db.client import fetch_all
 async def run_vector_search(
     query_vector: List[float],
     user_projects: List[str],
+    user_id: str,
     top_k: int = 200
 ) -> List[Dict[str, Any]]:
 
     """
     Searches the database for similar chunks using vector similarity + ACL filtering.
+    Includes both documents AND handovers that the user has access to.
     Uses the connection pool for efficient database access.
     """
 
@@ -33,25 +35,54 @@ async def run_vector_search(
     if len(query_vector) != 1024:
         raise ValueError(f"Query vector must have 1024 dimensions, got {len(query_vector)}")
 
-    # 2. Run pgvector similarity search with ACL filter using connection pool
+    # 2. Run pgvector similarity search with ACL filter
+    # UNION results from both documents and handovers
     try:
         sql = """
-        SELECT
-            c.chunk_id,
-            c.doc_id,
-            d.title,
-            c.text,
-            d.uri,
-            c.heading_path,
-            1 - (c.embedding <=> $1::vector) AS score
-        FROM chunks c
-        JOIN documents d ON d.doc_id = c.doc_id
-        WHERE d.deleted_at IS NULL
-          AND (
-            d.visibility = 'Public'
-            OR d.project_id = ANY($2)
-          )
-        ORDER BY c.embedding <=> $1::vector
+        (
+            -- Search chunks from documents
+            SELECT
+                c.chunk_id,
+                c.doc_id,
+                NULL::bigint as handover_id,
+                d.title,
+                c.text,
+                d.uri,
+                c.heading_path,
+                'document' as source_type,
+                1 - (c.embedding <=> $1::vector) AS score
+            FROM chunks c
+            JOIN documents d ON d.doc_id = c.doc_id
+            WHERE d.deleted_at IS NULL
+              AND c.doc_id IS NOT NULL
+              AND (
+                d.visibility = 'Public'
+                OR d.project_id = ANY($2)
+              )
+        )
+        UNION ALL
+        (
+            -- Search chunks from handovers (user must be sender, recipient, or CC'd)
+            SELECT
+                c.chunk_id,
+                NULL::bigint as doc_id,
+                c.handover_id,
+                h.title,
+                c.text,
+                'handover://' || h.handover_id as uri,
+                c.heading_path,
+                'handover' as source_type,
+                1 - (c.embedding <=> $1::vector) AS score
+            FROM chunks c
+            JOIN handovers h ON h.handover_id = c.handover_id
+            WHERE c.handover_id IS NOT NULL
+              AND (
+                h.from_employee_id = $4
+                OR h.to_employee_id = $4
+                OR $4 = ANY(h.cc_employee_ids)
+              )
+        )
+        ORDER BY score DESC
         LIMIT $3
         """
 
@@ -59,7 +90,7 @@ async def run_vector_search(
         # [0.1, 0.2, ...] → '[0.1,0.2,...]'
         vector_str = '[' + ','.join(map(str, query_vector)) + ']'
 
-        rows = await fetch_all(sql, vector_str, user_projects, top_k)
+        rows = await fetch_all(sql, vector_str, user_projects, top_k, user_id)
 
         # 3. Format results
         results = []
@@ -67,10 +98,12 @@ async def run_vector_search(
             results.append({
                 "chunk_id": row["chunk_id"],
                 "doc_id": row["doc_id"],
+                "handover_id": row["handover_id"],
                 "title": row["title"],
                 "text": row["text"],
                 "uri": row["uri"],
                 "heading_path": row["heading_path"],
+                "source_type": row["source_type"],
                 "score": float(row["score"]),
             })
 
@@ -220,7 +253,7 @@ async def run_vector_search(
 #ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
 #ــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــــ
 
-def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Dict[str, Any]]:
+async def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Dict[str, Any]]:
     """
     Reranks chunks using Cohere's reranker model for better relevance.
     """
@@ -231,14 +264,14 @@ def rerank(chunks: List[Dict[str, Any]], query: str, top_k: int = 12) -> List[Di
     if not api_key:
         raise ValueError("Cohere API key not found in environment variables.")
 
-    client = cohere.Client(api_key)
+    client = cohere.AsyncClient(api_key)
 
     try:
         # 1. Takes the 200 candidates from vector search
         documents = [c["text"] for c in chunks]
 
         # 2. Calls Cohere's rerank
-        response = client.rerank(
+        response = await client.rerank(
             query=query,
             documents=documents,
             model="rerank-english-v3.0",

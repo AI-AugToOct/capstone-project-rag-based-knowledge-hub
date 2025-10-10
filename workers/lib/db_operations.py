@@ -8,6 +8,7 @@ Handles upserting documents and chunks to the database.
 from typing import List, Optional
 import psycopg2
 import os
+from .constants import EMBEDDING_DIM
 
 
 def get_connection():
@@ -216,8 +217,8 @@ def insert_chunk(
 ) -> None:
     
     """Insert a document chunk"""
-    if len(embedding) != 1024:
-        raise ValueError("Embedding must be 1024-dimensional")
+    if len(embedding) != EMBEDDING_DIM:
+        raise ValueError(f"Embedding must be {EMBEDDING_DIM}-dimensional")
 
     query = """
         INSERT INTO chunks (

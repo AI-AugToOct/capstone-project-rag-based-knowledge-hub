@@ -23,7 +23,7 @@ async def get_document(
     token = authorization.replace("Bearer ", "")
 
     try:
-        user_id = await auth.verify_jwt(token)
+        user_id = auth.verify_jwt(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 

@@ -1,15 +1,19 @@
 # FastAPI and ASGI server
-fastapi==0.104.1
+fastapi==0.118.0
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
+pydantic==2.11.10
 
 # Database
 asyncpg==0.29.0            # PostgreSQL async driver
 psycopg2-binary==2.9.9     # PostgreSQL sync driver (if needed)
+supabase==2.21.1           # Supabase client for storage
+realtime==2.21.1           # Required by supabase
+websockets==15.0.1         # Required by realtime
 
 # AI Services
 cohere==4.37               # Embeddings and reranking
 groq==0.4.1                # LLM inference
+tiktoken==0.5.2            # Token counting for chunking
 
 # Authentication
 PyJWT>=2.8.0                       # JWT handling (actively maintained, no deprecation warnings)
@@ -19,7 +23,7 @@ python-multipart==0.0.6            # Form data parsing
 python-dotenv==1.0.0       # Load .env files
 
 # HTTP client (for external API calls)
-httpx==0.25.2
+httpx[http2]==0.26.0
 
 # Testing (optional)
 pytest==7.4.3

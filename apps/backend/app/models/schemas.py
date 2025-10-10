@@ -117,3 +117,99 @@ class DocMetadata(BaseModel):
                 "language": "en"
             }
         }
+
+
+# ============================================================================
+# Handover Models
+# ============================================================================
+
+class HandoverStatus(str, Enum):
+    """Handover status enum"""
+    PENDING = "pending"
+    ACKNOWLEDGED = "acknowledged"
+    COMPLETED = "completed"
+
+
+class CreateHandoverRequest(BaseModel):
+    """Request body for POST /api/handovers"""
+    to_employee_id: str = Field(..., description="Recipient's employee ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
+    title: str = Field(..., description="Handover title", min_length=1, max_length=500, example="Project Atlas Handover")
+    project_id: Optional[str] = Field(None, description="Optional project ID", example="Atlas")
+    context: Optional[str] = Field(None, description="Why this handover exists", example="Moving to new team")
+    current_status: Optional[str] = Field(None, description="What's been done so far", example="Completed initial setup")
+    next_steps: Optional[List[dict]] = Field(None, description="List of next steps", example=[{"task": "Deploy to prod", "done": False}])
+    resources: Optional[List[dict]] = Field(None, description="Related resources/documents", example=[{"type": "doc", "doc_id": 123, "title": "Setup Guide"}])
+    contacts: Optional[List[dict]] = Field(None, description="Key contacts", example=[{"name": "Sarah", "email": "sarah@example.com", "role": "Lead"}])
+    additional_notes: Optional[str] = Field(None, description="Additional free-form notes", example="Please review the deployment checklist")
+    cc_employee_ids: Optional[List[str]] = Field(None, description="List of employee IDs to CC", example=["123e4567-e89b-12d3-a456-426614174000"])
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "to_employee_id": "550e8400-e29b-41d4-a716-446655440000",
+                "title": "Project Atlas Handover",
+                "project_id": "Atlas",
+                "context": "Moving to new team, need to transfer knowledge",
+                "current_status": "API is deployed, documentation is up to date",
+                "next_steps": [
+                    {"task": "Review deployment checklist", "done": False},
+                    {"task": "Schedule knowledge transfer meeting", "done": False}
+                ],
+                "resources": [
+                    {"type": "doc", "doc_id": 123, "title": "Atlas Setup Guide"},
+                    {"type": "link", "url": "https://notion.so/runbook", "title": "Runbook"}
+                ],
+                "contacts": [
+                    {"name": "Sarah Khan", "email": "sarah@example.com", "role": "Team Lead"}
+                ],
+                "additional_notes": "Please prioritize the deployment checklist review",
+                "cc_employee_ids": ["123e4567-e89b-12d3-a456-426614174000"]
+            }
+        }
+
+
+class HandoverResponse(BaseModel):
+    """Response model for handover details"""
+    handover_id: int = Field(..., description="Handover ID")
+    title: str = Field(..., description="Handover title")
+    project_id: Optional[str] = Field(None, description="Project ID")
+    project_name: Optional[str] = Field(None, description="Project name")
+    from_employee_id: str = Field(..., description="Sender's employee ID")
+    to_employee_id: str = Field(..., description="Recipient's employee ID")
+    from_name: Optional[str] = Field(None, description="Sender's display name")
+    from_email: Optional[str] = Field(None, description="Sender's email")
+    to_name: Optional[str] = Field(None, description="Recipient's display name")
+    to_email: Optional[str] = Field(None, description="Recipient's email")
+    context: Optional[str] = Field(None, description="Handover context")
+    current_status: Optional[str] = Field(None, description="Current status description")
+    next_steps: Optional[List[dict]] = Field(None, description="Next steps")
+    resources: Optional[List[dict]] = Field(None, description="Resources")
+    contacts: Optional[List[dict]] = Field(None, description="Contacts")
+    additional_notes: Optional[str] = Field(None, description="Additional notes")
+    status: HandoverStatus = Field(..., description="Handover status")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    acknowledged_at: Optional[datetime] = Field(None, description="Acknowledgement timestamp")
+    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class HandoversListResponse(BaseModel):
+    """Response for GET /api/handovers - lists received and sent handovers"""
+    received: List[HandoverResponse] = Field(..., description="Handovers received by the user")
+    sent: List[HandoverResponse] = Field(..., description="Handovers sent by the user")
+
+
+class UpdateHandoverStatusRequest(BaseModel):
+    """Request body for PATCH /api/handovers/:id"""
+    status: HandoverStatus = Field(..., description="New status (acknowledged or completed)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "acknowledged"
+            }
+        }
