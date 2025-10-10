@@ -1,5 +1,13 @@
 # Database Schema Guide
 
+## 📊 Visual Schema Diagram
+
+**[View Full ER Diagram (schema.svg)](./schema.svg)**
+
+The diagram shows all 7 tables, their relationships, primary/foreign keys, and data types.
+
+---
+
 ## Overview
 
 Our knowledge hub uses **7 tables** to manage permissions, documents, handovers, and search:
